@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.11
+
+Дата: 2026-05-07
+
+- Merge pull request #53 from TheSashaDev/devin/1778183666-smart-busy-notify
+- feat: smart busy-transition notification based on context, persona, stage, duration
+
 ## 0.1.10
 
 Дата: 2026-05-07
