@@ -23,10 +23,3 @@ function escapeHtml(text: string): string {
 export function toHtmlWithSpoilers(text: string): string {
   return escapeHtml(text).replace(/\|\|(.+?)\|\|/g, "<tg-spoiler>$1</tg-spoiler>");
 }
-
-// kept for editLastMessage in userbot.ts
-const MD2_RESERVED = /([_*\[\]()~`>#+\-=|{}.!\\])/g;
-
-export function escapeMarkdownV2(text: string): string {
-  return text.replace(MD2_RESERVED, "\\$1");
-}
