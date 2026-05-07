@@ -2,11 +2,12 @@ import { Bot } from "grammy";
 import type { ProfileConfig } from "../types.js";
 import type { IncomingMedia, IncomingMessage, TgAdapter } from "./index.js";
 import { hasSpoilers, toHtmlWithSpoilers } from "./markdown.js";
+import { buildBotClientOptions } from "./proxy-fetch.js";
 
 export function makeBotAdapter(cfg: ProfileConfig): TgAdapter {
   const token = cfg.telegram.botToken;
   if (!token) throw new Error("BOT_TOKEN missing");
-  const bot = new Bot(token);
+  const bot = new Bot(token, { client: buildBotClientOptions(cfg.telegram.proxy) });
 
   return {
     async start(onMessage) {
