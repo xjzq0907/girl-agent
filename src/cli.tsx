@@ -15,7 +15,7 @@ import { runServer } from "./server.js";
 import { communicationProfileLabel, deriveLegacyVibe, findCommunicationPreset, normalizeCommunicationProfile } from "./presets/communication.js";
 import { findStage } from "./presets/stages.js";
 import type { ProfileConfig, ClientMode, StageId, LLMProto, Nationality, CommunicationProfile, PrivacyMode } from "./types.js";
-import { runMigrations, checkForPendingMigrations } from "./migrations/index.js";
+import { runMigrations } from "./migrations/index.js";
 
 const HELP = `
 girl-agent — AI girl for Telegram
@@ -291,8 +291,7 @@ function personaNotesForGeneration(cfg: ProfileConfig): string {
 }
 
 async function runUpdate(verbose: boolean) {
-  const { listProfiles: lp } = await import("./storage/md.js");
-  const profiles = await lp();
+  const profiles = await listProfiles();
   if (!profiles.length) {
     process.stdout.write("нет профилей — нечего обновлять.\n");
     return;

@@ -12,6 +12,8 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ProfileConfig } from "../types.js";
 import { DATA_ROOT, listProfiles, readConfig, writeConfig, profileDir } from "../storage/md.js";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 export interface Migration {
   id: string;
@@ -124,8 +126,10 @@ export async function checkForPendingMigrations(): Promise<boolean> {
 
 function currentVersion(): string {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return "0.1.11"; // обновлять вместе с package.json
+    const here = fileURLToPath(import.meta.url);
+    const pkgPath = path.resolve(path.dirname(here), "..", "..", "package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: string };
+    return pkg.version ?? "unknown";
   } catch {
     return "unknown";
   }
