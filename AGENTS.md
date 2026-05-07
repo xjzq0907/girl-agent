@@ -105,7 +105,7 @@ Profiles are stored in `./data/<slug>/` (or `$GIRL_AGENT_DATA/<slug>/`):
 - **Conflict system**: Escalates on spam/pressure. Cold periods = silence for hours/days.
 - **Anti-AI**: System prompt strictly forbids markdown formatting, "of course", "I understand", emoji rows, questions at end of messages.
 - **WSS by default**: Telegram connections use WebSocket (port 443) to bypass ISP blocks.
-- **Migration system**: `src/migrations/` contains versioned data migration scripts. New migrations auto-run on `npx @thesashadev/girl-agent update` or on startup.
+- **Migration system**: `src/migrations/` contains versioned data migration scripts. Run via `npx @thesashadev/girl-agent update`.
 
 ## Adding New Features
 

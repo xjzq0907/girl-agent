@@ -127,9 +127,16 @@ export async function checkForPendingMigrations(): Promise<boolean> {
 function currentVersion(): string {
   try {
     const here = fileURLToPath(import.meta.url);
-    const pkgPath = path.resolve(path.dirname(here), "..", "..", "package.json");
-    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: string };
-    return pkg.version ?? "unknown";
+    let dir = path.dirname(here);
+    for (let i = 0; i < 5; i++) {
+      const candidate = path.join(dir, "package.json");
+      try {
+        const pkg = JSON.parse(readFileSync(candidate, "utf8")) as { name?: string; version?: string };
+        if (pkg.name === "@thesashadev/girl-agent" && pkg.version) return pkg.version;
+      } catch { /* next */ }
+      dir = path.dirname(dir);
+    }
+    return "unknown";
   } catch {
     return "unknown";
   }
