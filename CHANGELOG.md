@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.12
+
+Дата: 2026-05-08
+
+- Merge pull request #58 from k1gs/fix/daily-life-sleep-schedule-11930283897782997721
+- fix: use dynamic sleep schedule in daily-life prompt generator
+- fix: update daily-life prompt to support dynamic sleep schedules
+
 ## 0.1.11
 
 Дата: 2026-05-07
