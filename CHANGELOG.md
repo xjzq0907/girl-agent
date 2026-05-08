@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.14
+
+Дата: 2026-05-08
+
+- Merge pull request #59 from TheSashaDev/devin/1778231542-oauth-fixed-port
+- fix: update OAuth client credentials and add client_secret to token requests
+- fix: use fixed port 3000 for OAuth callback
+
 ## 0.1.13
 
 Дата: 2026-05-08
