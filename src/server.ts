@@ -64,7 +64,7 @@ env-vars (для CI / docker secrets / k8s):
   GIRL_AGENT_TOKEN          telegram bot token
   GIRL_AGENT_API_PRESET     openai|anthropic|claudehub|...
   GIRL_AGENT_API_KEY        ключ от провайдера
-  GIRL_AGENT_MODEL, _NAME, _AGE, _NATIONALITY, _TZ, _STAGE (id или номер 1-8), _COMM_PRESET
+  GIRL_AGENT_MODEL, _NAME, _AGE, _NATIONALITY, _TZ, _STAGE (id или номер 1-8), _COMM_PRESET, _IGNORE_TENDENCY
 
 для интерактивной первичной настройки запускай без флагов в обычном терминале —
 откроется ink-визард.
@@ -233,7 +233,8 @@ function configFromEnv(): ProfileConfig | null {
       : {
           apiId: Number(e.GIRL_AGENT_TG_API_ID ?? 0),
           apiHash: e.GIRL_AGENT_TG_API_HASH ?? "",
-          phone: e.GIRL_AGENT_TG_PHONE ?? ""
+          phone: e.GIRL_AGENT_TG_PHONE ?? "",
+          proxy: parseTelegramProxy(e.GIRL_AGENT_TG_PROXY)
         },
     mcp: [],
     privacy: "owner-only" as PrivacyMode,
@@ -241,6 +242,7 @@ function configFromEnv(): ProfileConfig | null {
     sleepFrom: Number(e.GIRL_AGENT_SLEEP_FROM ?? 23),
     sleepTo: Number(e.GIRL_AGENT_SLEEP_TO ?? 8),
     nightWakeChance: Number(e.GIRL_AGENT_NIGHT_WAKE ?? 0.05),
+    ignoreTendency: Number(e.GIRL_AGENT_IGNORE_TENDENCY ?? 35),
     communication: commPreset.profile,
     vibe: commPreset.profile.messageStyle === "one-liners" ? "short" : "warm",
     busySchedule: []
@@ -304,12 +306,35 @@ function validateConfig(raw: unknown): ProfileConfig {
     sleepFrom: c.sleepFrom ?? 23,
     sleepTo: c.sleepTo ?? 8,
     nightWakeChance: c.nightWakeChance ?? 0.05,
+    ignoreTendency: c.ignoreTendency ?? 35,
     communication: c.communication ?? COMMUNICATION_PRESETS[0]!.profile,
     vibe: c.vibe,
     personaNotes: c.personaNotes,
     busySchedule: c.busySchedule ?? []
   };
   return filled;
+}
+
+function parseTelegramProxy(raw: string | undefined): ProfileConfig["telegram"]["proxy"] | undefined {
+  if (!raw?.trim()) return undefined;
+  try {
+    const url = new URL(raw);
+    const socksType = url.protocol === "socks4:" ? 4 : 5;
+    const port = Number(url.port);
+    if (!url.hostname || !Number.isInteger(port) || port <= 0) return undefined;
+    return {
+      ip: url.hostname,
+      port,
+      socksType,
+      username: url.username ? decodeURIComponent(url.username) : undefined,
+      password: url.password ? decodeURIComponent(url.password) : undefined
+    };
+  } catch {
+    const [host, portRaw] = raw.split(":");
+    const port = Number(portRaw);
+    if (!host || !Number.isInteger(port) || port <= 0) return undefined;
+    return { ip: host, port, socksType: 5 };
+  }
 }
 
 // ---------------- ops scaffolds ----------------
@@ -337,6 +362,7 @@ function buildConfigTemplate(): string {
     sleepFrom: 23,
     sleepTo: 8,
     nightWakeChance: 0.05,
+    ignoreTendency: 35,
     communication: COMMUNICATION_PRESETS[0]!.profile,
     vibe: "warm",
     busySchedule: []

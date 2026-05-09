@@ -86,18 +86,22 @@ export class Runtime extends EventEmitter {
     this.agendaTimer = setInterval(() => this.tickAgenda().catch(e =>
       this.emit("event", { type: "error", text: "agenda tick: " + (e as Error).message } as RuntimeEvent)
     ), 60_000);
+    this.agendaTimer.unref?.();
 
     // Раз в 30 мин обновляем daily-life (если сменился день) + закрываем старые сессии в summary
     this.dailyTimer = setInterval(() => this.dailyMaintenance().catch(e =>
       this.emit("event", { type: "error", text: "daily maintenance: " + (e as Error).message } as RuntimeEvent)
     ), 30 * 60_000);
+    this.dailyTimer.unref?.();
   }
 
   async stop(): Promise<void> {
     if (this.agendaTimer) clearInterval(this.agendaTimer);
     if (this.dailyTimer) clearInterval(this.dailyTimer);
+    for (const timer of this.pendingReplyTimers.values()) clearTimeout(timer);
+    this.pendingReplyTimers.clear();
     try {
-      const made = await closeCurrentSession(this.llm, this.cfg);
+      const made = await withTimeout(closeCurrentSession(this.llm, this.cfg), 3500);
       if (made) this.emit("event", { type: "info", text: "daily summary обновлена" } as RuntimeEvent);
     } catch (e) {
       this.emit("event", { type: "error", text: "daily summary: " + (e as Error).message } as RuntimeEvent);
@@ -137,6 +141,7 @@ export class Runtime extends EventEmitter {
         this.emit("event", { type: "error", text: silentErrorLabel(e) } as RuntimeEvent)
       );
     }, delaySec * 1000);
+    timer.unref?.();
     this.pendingReplyTimers.set(key, timer);
   }
 
@@ -215,7 +220,7 @@ export class Runtime extends EventEmitter {
     };
   }
 
-  private userbotActionAvailable(name: keyof Pick<TgAdapter, "blockContact" | "unblockContact" | "readHistory" | "deleteDialogHistory" | "reportSpam">): boolean {
+  private userbotActionAvailable(name: keyof Pick<TgAdapter, "blockContact" | "unblockContact" | "readHistory" | "reportSpam">): boolean {
     return this.cfg.mode === "userbot" && typeof this.tg?.[name] === "function";
   }
 
@@ -252,6 +257,10 @@ export class Runtime extends EventEmitter {
     }
     for (let i = 0; i < bubbles.length; i++) {
       const text = bubbles[i]!;
+      if (isDuplicateAssistantBubble(hist, text)) {
+        this.emit("event", { type: "info", text: `skip duplicate bubble: "${text.slice(0, 60)}"`, chatId } as RuntimeEvent);
+        continue;
+      }
       if (typing) {
         await this.tg.setTyping(chatId, true).catch(() => {});
         await sleep(350 + Math.random() * 900);
@@ -332,7 +341,7 @@ export class Runtime extends EventEmitter {
     return reply.split(/\n*---\n*/).map((s: string) => s.trim()).filter(Boolean).slice(0, 2);
   }
 
-  private requireUserbotAction(name: keyof Pick<TgAdapter, "blockContact" | "unblockContact" | "readHistory" | "deleteDialogHistory" | "reportSpam">): void {
+  private requireUserbotAction(name: keyof Pick<TgAdapter, "blockContact" | "unblockContact" | "readHistory" | "reportSpam">): void {
     if (!this.userbotActionAvailable(name)) throw new Error(`доступно только в userbot mode: ${name}`);
   }
 
@@ -546,7 +555,7 @@ export class Runtime extends EventEmitter {
         await this.tg.setReaction(m.chatId, m.messageId, tick.reaction!).catch(() => {});
         this.emit("event", { type: "info", text: `реакция ${tick.reaction} на "${incomingText.slice(0, 40)}"` } as RuntimeEvent);
         appendSessionLog(this.cfg.slug, this.cfg.tz, `  -> reaction ${tick.reaction}`).catch(() => {});
-      }, reactDelay);
+      }, reactDelay).unref?.();
     }
 
     if (!tick.shouldReply) {
@@ -634,7 +643,7 @@ export class Runtime extends EventEmitter {
       await this.executeToolAction(action, chatId);
     }
 
-    const bubbles = cleanedReply.split(/\n*---\n*/).map(s => s.trim()).filter(Boolean).slice(0, Math.max(tick.bubbles || 1, 1));
+    const bubbles = dedupeBubbles(cleanedReply.split(/\n*---\n*/).map(s => s.trim()).filter(Boolean)).slice(0, Math.max(tick.bubbles || 1, 1));
     const sent = await this.sendBubbles(chatId, bubbles, hist, scope, tick.typing);
     if (scope === "primary") {
       recordInteractionMemory(this.llm, this.cfg, lastUser ?? "", sent.join(" / ")).catch(() => {});
@@ -695,7 +704,8 @@ export class Runtime extends EventEmitter {
     try {
       const text = await this.composeProactiveMessage(item, hist);
       if (!text) { await markAgendaFired(this.cfg.slug, item.id); return; }
-      const bubbles = text.split(/\n*---\n*/).map(s => s.trim()).filter(Boolean).slice(0, 4);
+      const bubbles = text.split(/\n*---\n*/).map(s => s.trim()).filter(Boolean).slice(0, 4).filter(piece => !isDuplicateAssistantBubble(hist, piece));
+      if (!bubbles.length) { await markAgendaFired(this.cfg.slug, item.id); return; }
       for (let i = 0; i < bubbles.length; i++) {
         const piece = bubbles[i]!;
         if (i > 0) {
@@ -834,13 +844,6 @@ export class Runtime extends EventEmitter {
     return `userbot: marked read ${target}`;
   }
 
-  async cmdClearChat(chatId?: string, revoke = false): Promise<string> {
-    this.requireUserbotAction("deleteDialogHistory");
-    const target = this.resolveChatRef(chatId);
-    await this.tg.deleteDialogHistory?.(target, revoke);
-    return `userbot: cleared dialog ${target}${revoke ? " with revoke" : ""}`;
-  }
-
   async cmdReportSpam(chatId?: string): Promise<string> {
     this.requireUserbotAction("reportSpam");
     const target = this.resolveChatRef(chatId);
@@ -855,16 +858,6 @@ export class Runtime extends EventEmitter {
     if (!lastId) throw new Error("нет последнего отправленного сообщения для этого чата");
     await this.tg.deleteMessages?.(target, [lastId], revoke);
     return `deleted last message ${lastId} in ${target}`;
-  }
-
-  async cmdEditLast(text: string, chatId?: string): Promise<string> {
-    if (!this.actionAvailable("editLastMessage")) throw new Error("editLastMessage недоступно в этом режиме");
-    if (!text.trim()) throw new Error("текст для edit пустой");
-    const target = this.resolveChatRef(chatId);
-    const lastId = this.lastSentByChat.get(this.histKey(target));
-    if (!lastId) throw new Error("нет последнего отправленного сообщения для этого чата");
-    await this.tg.editLastMessage?.(target, lastId, text.trim());
-    return `edited last message ${lastId} in ${target}`;
   }
 
   async cmdSticker(chatId?: string): Promise<string> {
@@ -1136,40 +1129,10 @@ export class Runtime extends EventEmitter {
             this.emit("event", { type: "info", text: `AI tool: marked read ${chatId}`, chatId } as RuntimeEvent);
           }
           break;
-        case "CLEAR":
-          if (this.userbotActionAvailable("deleteDialogHistory")) {
-            await this.tg.deleteDialogHistory?.(chatId, false);
-            this.emit("event", { type: "info", text: `AI tool: cleared dialog ${chatId}`, chatId } as RuntimeEvent);
-          }
-          break;
-        case "CLEAR_REVOKE":
-          if (this.userbotActionAvailable("deleteDialogHistory")) {
-            await this.tg.deleteDialogHistory?.(chatId, true);
-            this.emit("event", { type: "info", text: `AI tool: cleared dialog ${chatId} (revoke)`, chatId } as RuntimeEvent);
-          }
-          break;
         case "REPORT":
           if (this.userbotActionAvailable("reportSpam")) {
             await this.tg.reportSpam?.(chatId);
             this.emit("event", { type: "info", text: `AI tool: reported spam ${chatId}`, chatId } as RuntimeEvent);
-          }
-          break;
-        case "DELETE_LAST":
-          if (this.actionAvailable("deleteMessages")) {
-            const lastId = this.lastSentByChat.get(this.histKey(chatId));
-            if (lastId) {
-              await this.tg.deleteMessages?.(chatId, [lastId], true);
-              this.emit("event", { type: "info", text: `AI tool: deleted last ${chatId}`, chatId } as RuntimeEvent);
-            }
-          }
-          break;
-        case "EDIT_LAST":
-          if (this.actionAvailable("editLastMessage") && arg) {
-            const lastId = this.lastSentByChat.get(this.histKey(chatId));
-            if (lastId) {
-              await this.tg.editLastMessage?.(chatId, lastId, arg);
-              this.emit("event", { type: "info", text: `AI tool: edited last ${chatId}`, chatId } as RuntimeEvent);
-            }
           }
           break;
         case "STICKER":
@@ -1190,4 +1153,40 @@ export class Runtime extends EventEmitter {
   }
 }
 
+function normalizeForDuplicate(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, " ").replace(/[.!?…)\]]+$/g, "").trim();
+}
+
+function isDuplicateAssistantBubble(hist: ConversationTurn[], text: string): boolean {
+  const normalized = normalizeForDuplicate(text);
+  if (!normalized) return true;
+  return hist
+    .slice(-8)
+    .filter(t => t.role === "assistant")
+    .some(t => normalizeForDuplicate(t.content) === normalized);
+}
+
+function dedupeBubbles(bubbles: string[]): string[] {
+  const seen = new Set<string>();
+  return bubbles.filter(bubble => {
+    const normalized = normalizeForDuplicate(bubble);
+    if (!normalized || seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+}
+
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`timeout after ${ms}ms`)), ms);
+      timer.unref?.();
+    })
+  ]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
