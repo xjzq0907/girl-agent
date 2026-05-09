@@ -4,7 +4,7 @@ import mri from "mri";
 import { Wizard } from "./wizard/index.js";
 import { Dashboard } from "./dashboard/index.js";
 import { Runtime } from "./engine/runtime.js";
-import { DATA_ROOT, readConfig, listProfiles, slugify, writeConfig } from "./storage/md.js";
+import { DATA_ROOT, readConfig, listProfiles, slugify, writeConfig, normalizeOwnerId } from "./storage/md.js";
 import { findPreset } from "./presets/llm.js";
 import { generatePersonaPack } from "./engine/persona-gen.js";
 import { makeLLM } from "./llm/index.js";
@@ -53,6 +53,8 @@ required flags для headless setup (--name --age --stage --api-preset --mode; 
   --message-style=<style>     one-liners|balanced|bursty|longform
   --initiative=<level>        low|medium|high
   --life-sharing=<level>      low|medium|high
+  --ignore-tendency=<0..100>  склонность к игнору как вес decision-layer (не прямой рандом)
+  --owner-id=<tg_user_id>     явно закрепить владельца (если bot mode не узнал тебя)
   --privacy=<mode>            owner-only|allow-strangers (по умолчанию owner-only)
   --nationality=RU|UA         (по умолчанию RU)
   --tz=<value>                IANA "Europe/Moscow" / "GMT+3" / "+3" / "Киев" — поиск
@@ -66,7 +68,7 @@ update:
   npx girl-agent update                # обновить данные (миграции) до текущей версии
   npx girl-agent update --verbose      # с подробным выводом
 
-команды в работающем дашборде: :status :reset :stage <id|num> :pause :resume :cringe :persona :log :quit
+команды в работающем дашборде: :status :why :amnesia <мин> :reset :stage <id|num> :pause :resume :cringe :persona :log :sticker :quit
 `;
 
 async function main() {
@@ -74,7 +76,7 @@ async function main() {
     string: [
       "profile", "mode", "token", "api-id", "api-hash", "phone", "api-preset", "base-url", "proto", "model", "api-key",
       "name", "stage", "mcp", "nationality", "tz", "vibe", "persona-notes", "communication-preset",
-      "notifications", "message-style", "initiative", "life-sharing", "privacy", "config"
+      "notifications", "message-style", "initiative", "life-sharing", "ignore-tendency", "owner-id", "privacy", "config"
     ],
     boolean: [
       "help", "list", "reset", "new", "json-events", "headless", "server",
@@ -256,10 +258,12 @@ async function buildConfigFromFlags(argv: any): Promise<ProfileConfig> {
         },
     mcp: mcps,
     privacy,
+    ownerId: normalizeOwnerId(argv["owner-id"] ?? process.env.GIRL_AGENT_OWNER_ID),
     createdAt: new Date().toISOString(),
     sleepFrom: 23,
     sleepTo: 8,
     nightWakeChance: 0.05,
+    ignoreTendency: Number(argv["ignore-tendency"] ?? 35),
     vibe: deriveLegacyVibe(communication),
     communication,
     personaNotes: argv["persona-notes"] ? String(argv["persona-notes"]) : undefined,
