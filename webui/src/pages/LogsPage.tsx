@@ -1,0 +1,151 @@
+import { useEffect, useRef, useState } from "react";
+import { useStore } from "../lib/store";
+import { api, logsSocket, statusSocket } from "../lib/api";
+
+interface LogEvent { type: string; text?: string; t: number }
+
+const SCORE_KEYS: { key: string; label: string; negative?: boolean }[] = [
+  { key: "interest", label: "Интерес" },
+  { key: "trust", label: "Доверие" },
+  { key: "attraction", label: "Влечение" },
+  { key: "annoyance", label: "Раздражение", negative: true },
+  { key: "cringe", label: "Кринж", negative: true }
+];
+
+export function LogsPage() {
+  const activeSlug = useStore(s => s.activeSlug);
+  const profiles = useStore(s => s.profiles);
+  const toast = useStore(s => s.toast);
+  const setTab = useStore(s => s.setTab);
+  const showSetupFlow = useStore(s => s.showSetupFlow);
+
+  const [events, setEvents] = useState<LogEvent[]>([]);
+  const [score, setScore] = useState<Record<string, number> | null>(null);
+  const [stage, setStage] = useState<string | undefined>();
+  const [statusState, setStatusState] = useState<string>("stopped");
+  const [autoscroll, setAutoscroll] = useState(true);
+  const [filter, setFilter] = useState<"all" | "in" | "out" | "info" | "warn" | "error">("all");
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  const active = profiles.find(p => p.slug === activeSlug) ?? null;
+
+  useEffect(() => {
+    if (!activeSlug) return;
+    setEvents([]);
+    api.getLogsBuffer(activeSlug).then(r => setEvents(r.events as LogEvent[])).catch(() => { /* silent */ });
+    const offLogs = logsSocket(activeSlug, (e) => setEvents(prev => prev.concat(e).slice(-1000)));
+    const offStatus = statusSocket(activeSlug, (s) => {
+      setScore(s.score ?? null);
+      setStage(s.stage);
+      setStatusState(s.status?.state ?? "stopped");
+    });
+    return () => { offLogs(); offStatus(); };
+  }, [activeSlug]);
+
+  useEffect(() => {
+    if (autoscroll && boxRef.current) {
+      boxRef.current.scrollTop = boxRef.current.scrollHeight;
+    }
+  }, [events, autoscroll]);
+
+  if (!activeSlug) {
+    return (
+      <div className="empty">
+        <div className="em-icon">✦</div>
+        <div className="em-title">Профилей пока нет</div>
+        <div>Создайте первый профиль, чтобы начать.</div>
+        <button className="btn primary" onClick={() => showSetupFlow(true)}>Создать профиль</button>
+      </div>
+    );
+  }
+
+  const filteredEvents = events.filter(e => {
+    if (filter === "all") return true;
+    return e.type === filter;
+  });
+
+  return (
+    <div className="grid" style={{ gap: 16 }}>
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <div className="h-title">Статус</div>
+            <div className="h-meta">
+              <span className={`chip ${statusState === "running" ? "success" : statusState === "error" ? "error" : ""}`}>{statusLabel(statusState)}</span>
+              {active?.lastError && <span className="chip error" style={{ marginLeft: 8 }}>{active.lastError}</span>}
+              {stage && <span className="chip accent" style={{ marginLeft: 8 }}>стадия: {stage}</span>}
+            </div>
+          </div>
+          <div className="h-actions">
+            <button className="btn tiny" onClick={() => sendCommand("status", toast, activeSlug)}>:status</button>
+            <button className="btn tiny" onClick={() => sendCommand("why", toast, activeSlug)}>:why</button>
+            <button className="btn tiny" onClick={() => sendCommand("wake", toast, activeSlug)}>:wake</button>
+            <button className="btn tiny danger" onClick={() => { if (confirm("Сбросить relationship? Все шкалы вернутся к стартовым стадии.")) sendCommand("reset", toast, activeSlug); }}>:reset</button>
+          </div>
+        </div>
+        {score && (
+          <div className="score-grid">
+            {SCORE_KEYS.map(k => (
+              <div key={k.key} className={`score-cell ${k.negative ? "negative" : ""}`}>
+                <div className="lbl">{k.label}</div>
+                <div className="val">{Math.round(score[k.key] ?? 0)}</div>
+                <div className="bar"><div className="fill" style={{ width: `${Math.min(100, Math.max(0, score[k.key] ?? 0))}%` }} /></div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <div className="h-title">События runtime'а</div>
+          <div className="h-actions">
+            <select className="select" style={{ width: 120 }} value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
+              <option value="all">все</option>
+              <option value="in">in</option>
+              <option value="out">out</option>
+              <option value="info">info</option>
+              <option value="warn">warn</option>
+              <option value="error">error</option>
+            </select>
+            <label className="toggle">
+              <input type="checkbox" checked={autoscroll} onChange={(e) => setAutoscroll(e.target.checked)} />
+              <span className="track"><span className="knob" /></span>
+              <span style={{ fontSize: 12 }}>автоскролл</span>
+            </label>
+            <button className="btn tiny ghost" onClick={() => setEvents([])}>Очистить</button>
+          </div>
+        </div>
+        <div className="logs-box" ref={boxRef}>
+          {filteredEvents.length === 0 && <div style={{ color: "var(--ga-text-faint)" }}>(нет событий)</div>}
+          {filteredEvents.map((e, i) => (
+            <div key={i} className={`log-line ${e.type}`}>
+              <span className="ts">{new Date(e.t).toLocaleTimeString("ru-RU", { hour12: false })}</span>
+              <span className="tag">[{e.type}]</span>
+              <span className="msg">{e.text ?? JSON.stringify(e)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function sendCommand(cmd: string, toast: (t: string, k?: "success" | "error" | "info") => void, slug: string) {
+  try {
+    const r = await api.sendCommand(slug, cmd);
+    toast(r.text || `${cmd} выполнено`, "success");
+  } catch (e) {
+    toast(`Команда ${cmd} не выполнена: ${(e as Error)?.message}`, "error");
+  }
+}
+
+function statusLabel(s: string): string {
+  switch (s) {
+    case "running": return "● работает";
+    case "paused": return "‖ пауза";
+    case "error": return "! ошибка";
+    case "stopped":
+    default: return "○ остановлен";
+  }
+}
