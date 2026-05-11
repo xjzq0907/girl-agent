@@ -9,6 +9,7 @@ import { ConfigurationPage } from "./pages/ConfigurationPage";
 import { MemoryPage } from "./pages/MemoryPage";
 import { AddonsPage } from "./pages/AddonsPage";
 import { AssistantPage } from "./pages/AssistantPage";
+import { RelationshipPage } from "./pages/RelationshipPage";
 import { DiagnosticsPage } from "./pages/DiagnosticsPage";
 import { SetupFlow } from "./pages/SetupFlow";
 
@@ -43,6 +44,7 @@ export function App() {
             {tab === "memory" && <MemoryPage />}
             {tab === "addons" && <AddonsPage />}
             {tab === "assistant" && <AssistantPage />}
+            {tab === "relationship" && <RelationshipPage />}
             {tab === "diagnostics" && <DiagnosticsPage />}
           </div>
         </div>

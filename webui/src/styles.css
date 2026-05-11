@@ -546,6 +546,55 @@ a:hover { text-decoration: underline; }
 .banner.error { border-color: rgba(255, 122, 140, 0.4); }
 @keyframes banner-in { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+/* ==== Markdown preview ==== */
+
+.md-preview {
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--ga-border);
+  border-radius: var(--ga-radius);
+  padding: 18px 22px;
+  overflow-y: auto;
+  line-height: 1.65;
+  font-size: 14px;
+}
+.md-preview h1, .md-preview h2, .md-preview h3, .md-preview h4 { margin: 14px 0 6px; }
+.md-preview h1 { font-size: 22px; border-bottom: 1px solid var(--ga-border); padding-bottom: 6px; }
+.md-preview h2 { font-size: 18px; }
+.md-preview h3 { font-size: 16px; }
+.md-preview h4 { font-size: 14px; color: var(--ga-text-dim); }
+.md-preview p { margin: 6px 0; }
+.md-preview ul, .md-preview ol { margin: 6px 0; padding-left: 22px; }
+.md-preview blockquote {
+  border-left: 3px solid var(--ga-accent);
+  padding: 4px 12px;
+  margin: 8px 0;
+  background: rgba(255, 122, 214, 0.06);
+  border-radius: 0 8px 8px 0;
+  color: var(--ga-text-dim);
+}
+.md-preview code {
+  font-family: var(--ga-font-mono);
+  font-size: 12.5px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.md-preview pre {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--ga-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+.md-preview pre code { background: transparent; padding: 0; }
+.md-preview a { color: var(--ga-accent-2); }
+.md-preview hr { border: 0; height: 1px; background: var(--ga-border); margin: 16px 0; }
+.md-preview img { max-width: 100%; border-radius: 8px; }
+.md-preview table { border-collapse: collapse; margin: 8px 0; width: 100%; }
+.md-preview th, .md-preview td { border: 1px solid var(--ga-border); padding: 6px 10px; text-align: left; }
+.md-preview th { background: rgba(255, 255, 255, 0.03); }
+.md-preview del { color: var(--ga-text-faint); }
+
 /* ==== Apply pill (sticky) ==== */
 
 .apply-pill {

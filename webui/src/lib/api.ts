@@ -162,7 +162,13 @@ export const api = {
 
   async listAddons() { return req<{ available: AddonManifest[]; installed: InstalledAddon[]; builtin: string[] }>("GET", "/api/addons"); },
   async installAddon(id: string, manifest?: AddonManifest, profileSlug?: string) {
-    return req<{ ok: true; installed: InstalledAddon }>("POST", `/api/addons/${encodeURIComponent(id)}/install`, { manifest, profileSlug });
+    return req<{ ok: true; installed: InstalledAddon; applied?: string[] }>("POST", `/api/addons/${encodeURIComponent(id)}/install`, { manifest, profileSlug });
+  },
+  async installAddonFromUrl(url: string, profileSlug?: string) {
+    return req<{ ok: true; installed: InstalledAddon }>("POST", "/api/addons/install-url", { url, profileSlug });
+  },
+  async previewAddon(manifest: AddonManifest, profileSlug?: string) {
+    return req<{ ok: true; conflicts: string[] }>("POST", "/api/addons/preview", { manifest, profileSlug });
   },
   async uninstallAddon(id: string) {
     return req<{ ok: true }>("DELETE", `/api/addons/${encodeURIComponent(id)}`);

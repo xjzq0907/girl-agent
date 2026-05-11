@@ -5,6 +5,7 @@ import { useState } from "react";
 const TAB_TITLES: Record<string, string> = {
   assistant: "AI-помощник",
   logs: "Логи и статус",
+  relationship: "Отношения",
   configuration: "Конфигурация",
   memory: "Память",
   addons: "Аддоны",
