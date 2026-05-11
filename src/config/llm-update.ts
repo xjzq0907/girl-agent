@@ -1,4 +1,5 @@
 import { findPreset } from "../presets/llm.js";
+import { normalizeModelName } from "../engine/security.js";
 import type { LLMProto, ProfileConfig } from "../types.js";
 
 export interface LLMUpdate {
@@ -39,7 +40,8 @@ export function applyLLMUpdate(cfg: ProfileConfig, update: LLMUpdate): string[] 
     : presetChanged
       ? preset?.baseURL
       : cfg.llm.baseURL;
-  const model = update.model ?? (presetChanged ? preset?.defaultModel : cfg.llm.model) ?? "";
+  const rawModel = update.model ?? (presetChanged ? preset?.defaultModel : cfg.llm.model) ?? "";
+  const model = normalizeModelName(rawModel);
   const apiKey = update.apiKey !== undefined
     ? update.apiKey
     : presetChanged
