@@ -42,9 +42,14 @@ export class Router {
 
   add(method: Method, path: string, handler: Handler): void {
     const paramNames: string[] = [];
-    const re = path
-      .replace(/[.+*?^${}()|[\]\\]/g, "\\$&")
-      .replace(/\\:(\w+)/g, (_, name: string) => { paramNames.push(name); return "([^/]+)"; });
+    const parts = path.split("/").map(part => {
+      if (part.startsWith(":")) {
+        paramNames.push(part.slice(1));
+        return "([^/]+)";
+      }
+      return part.replace(/[.+*?^${}()|[\]\\]/g, "\\$&");
+    });
+    const re = parts.join("/");
     this.routes.push({
       method,
       pattern: new RegExp(`^${re}$`),
