@@ -65,6 +65,18 @@ const ASSISTANT_SYSTEM = `Ты — встроенный ИИ-помощник п
 - read_logs { limit?: number, type?: "in"|"out"|"info"|"warn"|"error" } — прочесть последние строки runtime-лога.
 - read_memory { file: string } — прочесть файл памяти.
 
+Вопросы к пользователю:
+Ты можешь задать пользователю вопрос с вариантами ответа (кнопками). Добавь в ответ блок:
+<question text="Текст вопроса?">
+  <option label="Вариант 1">Описание варианта</option>
+  <option label="Вариант 2">Описание варианта</option>
+</question>
+- Кнопок от 1 до 10.
+- Можно до 25 последовательных вопросов (диалог).
+- label — текст на кнопке (короткий), описание — пояснение (1 строка, опционально).
+- Пользователь может нажать кнопку или написать свой вариант в текстовом поле.
+- Используй вопросы когда нужен выбор: стиль общения, стадия, конкретный пресет и т.д.
+
 Важные подсказки:
 - ignoreTendency: 0 — всегда отвечает; 100 — почти всегда игнорит. По умолчанию 35.
 - Если пользователь жалуется что "не отвечает" → проверь runtime-action statе и read_logs.
@@ -122,6 +134,7 @@ export function registerAssistantRoutes(r: Router): void {
 
     const toolCalls = parseToolCalls(reply);
     const cleanReply = reply.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
+    // <question> блоки оставляем — фронт сам парсит для кнопок
     return { reply: cleanReply, toolCalls };
   });
 

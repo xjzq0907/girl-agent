@@ -525,6 +525,60 @@ a:hover { text-decoration: underline; }
   font-family: inherit; font-size: 14px;
 }
 
+/* ==== Assistant questions ==== */
+
+.assistant-question {
+  background: rgba(122, 140, 255, 0.06);
+  border: 1px solid rgba(122, 140, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+}
+.question-options {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.question-option-btn {
+  background: var(--ga-bg-glass);
+  border: 1px solid var(--ga-border);
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  min-width: 100px;
+}
+.question-option-btn:hover {
+  border-color: var(--ga-accent, #E8412A);
+  background: rgba(232, 65, 42, 0.08);
+}
+.question-option-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.qo-label { font-weight: 600; font-size: 13px; }
+.qo-desc { font-size: 11px; color: var(--ga-text-dim); margin-top: 2px; }
+
+.question-bar {
+  padding: 10px 12px;
+  background: rgba(122, 140, 255, 0.06);
+  border: 1px solid rgba(122, 140, 255, 0.2);
+  border-radius: 12px 12px 0 0;
+  border-bottom: none;
+}
+.question-bar-text { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.question-bar-options {
+  display: flex; flex-wrap: wrap; gap: 4px;
+}
+.question-bar-btn {
+  background: var(--ga-bg-glass);
+  border: 1px solid var(--ga-border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.question-bar-btn:hover {
+  border-color: var(--ga-accent, #E8412A);
+  background: rgba(232, 65, 42, 0.08);
+}
+
 /* ==== Addons grid ==== */
 
 .addon-card {
