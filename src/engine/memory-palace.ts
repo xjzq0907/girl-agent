@@ -103,6 +103,71 @@ const STOP_WORDS = new Set([
   "сейчас", "щас", "когда", "почему", "потому", "очень", "просто", "вообще", "короче", "типа"
 ]);
 
+const QUERY_EXPANSIONS: Record<string, readonly string[]> = {
+  помнишь: ["помню", "память", "вспомни", "вспомин"],
+  вспомни: ["помню", "помнишь", "память", "вспомин"],
+  вчера: ["прошлый", "прошлая", "прошлое"],
+  утром: ["утро", "утра", "утрен"],
+  обещал: ["обещание", "обещала", "обещали", "договорились"],
+  обещала: ["обещание", "обещал", "договорились"],
+  нравится: ["люблю", "нрав", "предпочитаю"],
+  любишь: ["люблю", "нравится", "нрав"]
+};
+
+function unique(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function wordsFrom(text: string): string[] {
+  return [...text.toLowerCase().matchAll(/[a-zа-яё0-9]{3,}/gi)]
+    .map(match => match[0])
+    .filter(token => !STOP_WORDS.has(token));
+}
+
+function lightStem(token: string): string {
+  if (token.length < 6) return token;
+  return token.replace(/(ами|ями|ого|ему|ыми|ими|ешь|ать|ять|ить|ого|его|ая|яя|ое|ее|ые|ие|ый|ий|ой|ом|ем|ах|ях|ов|ев|ам|ям|ам|ям|а|я|ы|и|е|у|ю)$/i, "");
+}
+
+function expandedTokens(query: string): string[] {
+  const base = wordsFrom(query);
+  const expanded = base.flatMap(token => [token, lightStem(token), ...(QUERY_EXPANSIONS[token] ?? [])]);
+  return unique(expanded).filter(token => token.length >= 3);
+}
+
+function wantedDays(tz: string, query: string): Set<string> {
+  const lower = query.toLowerCase();
+  const days = new Set<string>();
+  const now = new Date();
+  if (/(сегодня|с утра|утром|щас|сейчас|недавно)/i.test(lower)) days.add(sessionDate(tz, now));
+  if (/(вчера|прошл(ый|ая|ое)|позавчера)/i.test(lower)) {
+    const yesterday = new Date(now);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    days.add(sessionDate(tz, yesterday));
+  }
+  return days;
+}
+
+function wantedHalls(query: string): Set<MemoryHall> {
+  const lower = query.toLowerCase();
+  const halls = new Set<MemoryHall>();
+  if (/(обещ|договор|сделаешь|напомни)/i.test(lower)) halls.add("hall_promises");
+  if (/(нрав|люб|предпоч|хоч|не хочу)/i.test(lower)) halls.add("hall_preferences");
+  if (/(было|случил|произош|вчера|сегодня|утром|вечером)/i.test(lower)) halls.add("hall_events");
+  if (/(обид|груст|зл|рад|страш|переж)/i.test(lower)) halls.add("hall_feelings");
+  if (/(почему|зачем|как быть|что делать)/i.test(lower)) halls.add("hall_advice");
+  return halls;
+}
+
+function drawerSessionDay(cfg: ProfileConfig, drawer: MemoryDrawer): string {
+  const date = new Date(drawer.ts);
+  return Number.isNaN(date.getTime()) ? drawer.ts.slice(0, 10) : sessionDate(cfg.tz, date);
+}
+
+function normalizedQuote(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 function today(tz: string): string {
   return sessionDate(tz);
 }
@@ -253,7 +318,7 @@ async function ensureDefaults(cfg: ProfileConfig): Promise<void> {
   }));
 }
 
-function scoreDrawer(drawer: MemoryDrawer, tokens: string[], query: string): number {
+function scoreDrawer(cfg: ProfileConfig, drawer: MemoryDrawer, tokens: string[], query: string): number {
   if (!tokens.length) return drawer.salience;
   const haystack = [
     drawer.quote,
@@ -261,10 +326,15 @@ function scoreDrawer(drawer: MemoryDrawer, tokens: string[], query: string): num
     drawer.hall,
     drawer.keywords.join(" ")
   ].join("\n").toLowerCase();
+  const wantedDaySet = wantedDays(cfg.tz, query);
+  const hallSet = wantedHalls(query);
   let score = drawer.salience;
   for (const token of tokens) {
-    if (haystack.includes(token)) score += drawer.keywords.includes(token) ? 4 : 2;
+    if (haystack.includes(token)) score += drawer.keywords.includes(token) ? 5 : 2;
   }
+  if (drawer.keywords.some(keyword => tokens.some(token => keyword.includes(token) || token.includes(keyword)))) score += 3;
+  if (hallSet.has(drawer.hall)) score += 4;
+  if (wantedDaySet.has(drawerSessionDay(cfg, drawer))) score += 6;
   if (drawer.quote.toLowerCase().includes(query)) score += 4;
   return score;
 }
@@ -325,11 +395,9 @@ function renderPalaceRecall(drawers: MemoryDrawer[]): string {
 
 export async function searchPalaceDrawers(cfg: ProfileConfig, query: string, limit = 8): Promise<MemoryDrawer[]> {
   const normalized = query.toLowerCase();
-  const tokens = [...normalized.matchAll(/[a-zа-яё0-9]{3,}/gi)]
-    .map(match => match[0])
-    .filter(token => !STOP_WORDS.has(token));
+  const tokens = expandedTokens(normalized);
   const scored = (await listPalaceDrawers(cfg))
-    .map(drawer => ({ drawer, score: scoreDrawer(drawer, tokens, normalized) }))
+    .map(drawer => ({ drawer, score: scoreDrawer(cfg, drawer, tokens, normalized) }))
     .filter(item => item.score > item.drawer.salience || item.drawer.salience >= 8)
     .sort((a, b) => b.score - a.score || b.drawer.ts.localeCompare(a.drawer.ts));
   return scored.slice(0, limit).map(item => item.drawer);
@@ -351,7 +419,7 @@ export async function loadMemoryPalaceContext(cfg: ProfileConfig, incoming?: str
   ]);
   const query = incoming?.toLowerCase() ?? "";
   const factLines = facts.split("\n").filter(l => l.trim());
-  const tokens = query.split(/\s+/).filter(t => t.length > 3);
+  const tokens = expandedTokens(query);
   const relevantFacts = tokens.length
     ? factLines.filter(l => tokens.some(t => l.toLowerCase().includes(t))).slice(-18).join("\n") || facts.slice(-1800)
     : facts.slice(-1800);
@@ -388,6 +456,13 @@ export function memoryPalacePromptFragment(ctx: MemoryPalaceContext): string {
 
 async function appendDrawer(cfg: ProfileConfig, source: string, parsed: ParsedMemoryDrawer): Promise<void> {
   const stamp = nowStamp();
+  const quoteKey = normalizedQuote(parsed.quote);
+  const duplicate = (await listPalaceDrawers(cfg)).find(existing =>
+    normalizedQuote(existing.quote) === quoteKey ||
+    (existing.room === parsed.room && existing.hall === parsed.hall && normalizedQuote(existing.quote).includes(quoteKey)) ||
+    (existing.room === parsed.room && existing.hall === parsed.hall && quoteKey.includes(normalizedQuote(existing.quote)))
+  );
+  if (duplicate && duplicate.salience >= parsed.salience) return;
   const drawer: MemoryDrawer = {
     id: stableId(source, parsed.quote),
     ts: stamp,
@@ -445,6 +520,8 @@ ${incoming}
 """
 ${reply ?? ""}
 """
+
+Если новый факт явно заменяет старый ("теперь", "уже не", "больше не", "передумал", "поменялось"), сохрани новую фразу целиком как отдельный drawer с высокой salience и keywords включая старую/новую тему.
 
 Верни STRICT JSON:
 {
