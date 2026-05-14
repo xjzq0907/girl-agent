@@ -12,7 +12,7 @@ export interface ProfileConfig {
   mode: "bot" | "userbot"; stage: string;
   llm: { presetId: string; proto: "openai" | "anthropic"; baseURL?: string; apiKey: string; model: string; oauthRefreshToken?: string; oauthExpiresAt?: number };
   telegram: { botToken?: string; apiId?: number; apiHash?: string; sessionString?: string; phone?: string; useWSS?: boolean; proxy?: string };
-  mcp: { id: string; secrets: Record<string, string> }[];
+  mcp?: { id: string; secrets: Record<string, string> }[];
   ownerId?: number;
   privacy?: "owner-only" | "allow-strangers";
   createdAt: string;
@@ -168,7 +168,6 @@ export const api = {
   async listLLMPresets() { return req<{ presets: LLMPreset[] }>("GET", "/api/presets/llm"); },
   async listStages() { return req<{ stages: StagePreset[] }>("GET", "/api/presets/stages"); },
   async listCommunicationPresets() { return req<{ presets: CommunicationPreset[] }>("GET", "/api/presets/communication"); },
-  async listMCPPresets() { return req<{ presets: { id: string; name: string; description: string; ready: boolean; secrets: { key: string; label: string }[] }[] }>("GET", "/api/presets/mcp"); },
   async listTimezones(q = "") { return req<{ zones: { iana: string; gmtWinter: string; city: string; country: string; aliases: string[]; group?: "UA" | "CIS" | "RU" }[] }>("GET", `/api/presets/timezones?q=${encodeURIComponent(q)}`); },
   async pickNames(nationality: "RU" | "UA", count = 12) { return req<{ names: string[] }>("GET", `/api/presets/names?nationality=${nationality}&count=${count}`); },
 

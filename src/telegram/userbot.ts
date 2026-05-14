@@ -367,7 +367,14 @@ async function detectUserbotMedia(client: TelegramClient, message: any): Promise
     if (isVideoNote) return { kind: "video_note", caption, mimeType };
     if (isSticker) {
       const stickerAttr = attrs.find((a: any) => a.className === "DocumentAttributeSticker");
-      return { kind: "sticker", caption, mimeType, emoji: stickerAttr?.alt };
+      const out: IncomingMedia = { kind: "sticker", caption, mimeType, emoji: stickerAttr?.alt };
+      if (mimeType?.startsWith("image/")) {
+        try {
+          const downloaded = await client.downloadMedia(message, {});
+          if (Buffer.isBuffer(downloaded)) out.base64 = downloaded.toString("base64");
+        } catch { /* ignore media download failures */ }
+      }
+      return out;
     }
     if (isVideo) return { kind: "video", caption, mimeType };
     return { kind: "document", caption, mimeType };

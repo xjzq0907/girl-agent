@@ -1,6 +1,7 @@
 import http from "node:http";
 import { URL } from "node:url";
 import os from "node:os";
+import { existsSync, readFileSync } from "node:fs";
 import { Router, HttpError, readBody, sendJson, setCors } from "./http.js";
 import { serveStatic } from "./static.js";
 import { attachWebSockets } from "./websocket.js";
@@ -23,7 +24,41 @@ export interface WebUIServerOptions {
 }
 
 const DEFAULT_PORT = Number(process.env.GIRL_AGENT_PORT ?? 3000);
-const DEFAULT_HOST = process.env.GIRL_AGENT_HOST ?? "127.0.0.1";
+
+function isLikelyDocker(): boolean {
+  if (process.env.GIRL_AGENT_DOCKER || process.env.DOCKER_CONTAINER) return true;
+  try {
+    return os.release().toLowerCase().includes("docker") ||
+      existsSync("/.dockerenv") ||
+      readFileSync("/proc/1/cgroup", "utf8").toLowerCase().includes("docker");
+  } catch {
+    return false;
+  }
+}
+
+function displayHostForUrl(host: string): string {
+  const explicit = process.env.GIRL_AGENT_PUBLIC_URL?.trim();
+  if (explicit) {
+    try {
+      return new URL(explicit).host;
+    } catch {
+      return explicit.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+    }
+  }
+  if (host === "0.0.0.0" || host === "::") return isLikelyDocker() ? "localhost" : firstExternalIPv4() ?? "localhost";
+  return host === "127.0.0.1" ? "localhost" : host;
+}
+
+function firstExternalIPv4(): string | undefined {
+  for (const items of Object.values(os.networkInterfaces())) {
+    for (const item of items ?? []) {
+      if (item.family === "IPv4" && !item.internal) return item.address;
+    }
+  }
+  return undefined;
+}
+
+const DEFAULT_HOST = process.env.GIRL_AGENT_HOST ?? (isLikelyDocker() ? "0.0.0.0" : "127.0.0.1");
 
 export interface WebUIInstance {
   server: http.Server;
@@ -110,17 +145,7 @@ export async function startWebUIServer(opts: WebUIServerOptions = {}): Promise<W
     });
   });
 
-  const ifaces = os.networkInterfaces();
-  let displayHost = host;
-  if (host === "0.0.0.0") {
-    for (const k of Object.keys(ifaces)) {
-      for (const i of ifaces[k] ?? []) {
-        if (i.family === "IPv4" && !i.internal) { displayHost = i.address; break; }
-      }
-      if (displayHost !== "0.0.0.0") break;
-    }
-  }
-  const url = `http://${displayHost === "0.0.0.0" ? "127.0.0.1" : displayHost}:${port}`;
+  const url = `http://${displayHostForUrl(host)}:${port}`;
 
   // Auto-start single profile if requested
   if (opts.autoStart) {

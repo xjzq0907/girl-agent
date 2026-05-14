@@ -32,12 +32,12 @@ export function mediaPromptFragment(media?: IncomingMedia): string {
   if (media.kind === "voice") return "# Входящее голосовое\nОн прислал голосовое. Если нет расшифровки, реагируй как человек, которому неудобно слушать: попроси текстом или отмахнись.";
   if (media.kind === "video_note") return "# Входящий кружочек\nОн прислал кружочек. Не обещай отправить кружок в ответ. Можешь лениво/смущённо отреагировать.";
   if (media.kind === "video") return "# Входящее видео\nОн прислал видео. Реагируй осторожно; не притворяйся, что видела детали, если они не переданы модели.";
-  if (media.kind === "sticker") return "# Входящий стикер\nОн прислал стикер. Можно ответить реакцией/короткой репликой или тоже стикером, если уместно.";
+  if (media.kind === "sticker") return "# Входящий стикер\nОн прислал стикер. Если модель видит изображение стикера — реагируй на конкретную эмоцию/картинку, а не только на emoji. Можно ответить реакцией/короткой репликой или тоже стикером, если уместно.";
   return "# Входящий файл\nОн прислал файл. Не открывай и не обещай смотреть подробно, если содержимое не передано.";
 }
 
 export function imagePartFromMedia(media?: IncomingMedia): ChatContentPart | undefined {
-  if (!media || media.kind !== "photo" || !media.mimeType || !media.base64) return undefined;
+  if (!media || (media.kind !== "photo" && media.kind !== "sticker") || !media.mimeType || !media.base64) return undefined;
   return {
     type: "image",
     mimeType: media.mimeType,

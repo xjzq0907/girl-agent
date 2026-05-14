@@ -73,7 +73,7 @@ env-vars (для CI / docker secrets / k8s):
   GIRL_AGENT_MODEL, _NAME, _AGE, _NATIONALITY, _TZ, _STAGE (id или номер 1-8), _COMM_PRESET, _IGNORE_TENDENCY, _OWNER_ID
 
 для интерактивной первичной настройки запускай без флагов —
-откроется WebUI на http://localhost:3000.
+откроется WebUI на http://localhost:3000 (в docker используй -p 3000:3000).
 `;
 
 function parseServerArgs(argv: Record<string, unknown>): ServerArgs {
@@ -281,7 +281,6 @@ function configFromEnv(): ProfileConfig | null {
           phone: e.GIRL_AGENT_TG_PHONE ?? "",
           proxy: parseTelegramProxy(e.GIRL_AGENT_TG_PROXY)
         },
-    mcp: [],
     ownerId: normalizeOwnerId(e.GIRL_AGENT_OWNER_ID),
     privacy: "owner-only" as PrivacyMode,
     createdAt: new Date().toISOString(),
@@ -346,7 +345,6 @@ function validateConfig(raw: unknown): ProfileConfig {
       model: c.llm!.model!
     },
     telegram: c.telegram ?? {},
-    mcp: c.mcp ?? [],
     ownerId: normalizeOwnerId(c.ownerId ?? process.env.GIRL_AGENT_OWNER_ID),
     privacy: c.privacy ?? "owner-only",
     createdAt: c.createdAt ?? new Date().toISOString(),
@@ -403,7 +401,6 @@ function buildConfigTemplate(): string {
       model: "claude-sonnet-4.6"
     },
     telegram: { botToken: "REPLACE_ME" },
-    mcp: [],
     ownerId: undefined,
     privacy: "owner-only",
     createdAt: new Date().toISOString(),
@@ -484,9 +481,11 @@ docker run -d --name girl-agent --restart=unless-stopped \\
 # services:
 #   girl-agent:
 #     image: ghcr.io/thesashadev/girl-agent:latest
+#     # interactive WebUI: command: [] and ports: ["3000:3000"]
 #     command: ["server", "--config", "/config/bot.json", "--headless"]
 #     environment:
 #       GIRL_AGENT_DATA: /data
+#       GIRL_AGENT_HOST: 0.0.0.0
 #     volumes:
 #       - girl-agent-data:/data
 #       - ./bot.json:/config/bot.json:ro

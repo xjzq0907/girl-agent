@@ -24,6 +24,7 @@ usage:
   npx girl-agent                       # запустить WebUI и открыть http://localhost:3000
   npx girl-agent --port=8080           # кастомный порт
   npx girl-agent --host=0.0.0.0        # слушать на всех интерфейсах
+  GIRL_AGENT_PUBLIC_URL=https://example.com npx girl-agent  # URL для reverse proxy/docker
   npx girl-agent --no-browser          # не открывать браузер автоматически
   npx girl-agent --profile=<slug>      # запустить WebUI и сразу запустить указанный профиль
 
@@ -53,7 +54,7 @@ async function main(): Promise<void> {
   const argv = mri(process.argv.slice(2), {
     string: [
       "profile", "host", "port", "config", "api-preset", "model", "api-key", "base-url", "proto",
-      "name", "stage", "mcp", "nationality", "tz", "vibe", "persona-notes", "communication-preset",
+      "name", "stage", "nationality", "tz", "vibe", "persona-notes", "communication-preset",
       "notifications", "message-style", "initiative", "life-sharing", "ignore-tendency", "owner-id", "privacy",
       "mode", "token", "api-id", "api-hash", "phone", "age"
     ],
@@ -169,7 +170,8 @@ async function main(): Promise<void> {
   });
 
   const showHost = host === "0.0.0.0" ? "<public-ip>" : (host === "127.0.0.1" ? "localhost" : host);
-  const localUrl = `http://${host === "0.0.0.0" ? "127.0.0.1" : host}:${port}`;
+  const localHost = host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host;
+  const localUrl = `http://${localHost === "127.0.0.1" ? "localhost" : localHost}:${port}`;
 
   process.stdout.write(`\n  🌐 girl-agent WebUI запущен\n     ${instance.url}\n`);
   if (host === "0.0.0.0") {
@@ -237,18 +239,11 @@ async function buildConfigFromFlags(argv: Record<string, unknown>): Promise<Prof
   const slug = String(argv.profile ?? slugifyLocal(name));
   const mode = (argv.mode === "userbot" ? "userbot" : "bot");
   const tz = (argv.tz ? parseTzFlag(String(argv.tz)) : undefined) ?? defaultTzForNationality(nationality);
-  const mcpFlags = ([] as string[]).concat((argv.mcp as string | string[] | undefined) ?? []);
   const communication = (() => {
     const preset = findCommunicationPreset(typeof argv["communication-preset"] === "string" ? argv["communication-preset"] as string : undefined);
     return preset?.profile ?? normalizeCommunicationProfile({});
   })();
   const privacy = argv.privacy === "allow-strangers" ? "allow-strangers" : "owner-only";
-  const mcps: { id: string; secrets: Record<string, string> }[] = mcpFlags.map((entry: string) => {
-    const [id, key] = entry.split(":");
-    const secrets: Record<string, string> = id === "exa" ? { EXA_API_KEY: key ?? "" } : { value: key ?? "" };
-    return { id: id ?? "", secrets };
-  });
-
   return {
     slug,
     name,
@@ -265,7 +260,6 @@ async function buildConfigFromFlags(argv: Record<string, unknown>): Promise<Prof
           apiHash: String(argv["api-hash"] ?? ""),
           phone: String(argv.phone ?? "")
         },
-    mcp: mcps,
     privacy,
     ownerId: normalizeOwnerId(argv["owner-id"] ?? process.env.GIRL_AGENT_OWNER_ID),
     createdAt: new Date().toISOString(),

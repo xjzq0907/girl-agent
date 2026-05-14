@@ -100,7 +100,6 @@ export function registerProfileRoutes(r: Router): void {
       stage: data.stage ?? "tg-given-cold",
       llm: data.llm ?? { presetId: "claudehub", proto: "anthropic", apiKey: "", model: "claude-sonnet-4.6" },
       telegram: data.telegram ?? {},
-      mcp: data.mcp ?? [],
       privacy: data.privacy ?? "owner-only",
       ownerId: normalizeOwnerId(data.ownerId),
       createdAt: new Date().toISOString(),
