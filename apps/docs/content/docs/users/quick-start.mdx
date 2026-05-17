@@ -22,7 +22,31 @@ LLM → запуск. Всё через WebUI, без редактировани
 
 ### Установи girl-agent
 
-<Tabs items={["Linux / macOS / WSL", "Termux (Android)", "Docker", "Windows"]}>
+<Tabs items={["Windows (npx)", "Linux / macOS / WSL", "Termux (Android)", "Docker"]}>
+<Tab value="Windows (npx)">
+
+1. Поставь [Node.js 22 LTS](https://nodejs.org/en/download/) — обычный `.msi`-инсталлер,
+   галочка **Add to PATH** при установке.
+2. В PowerShell:
+
+   ```powershell
+   npx @thesashadev/girl-agent
+   ```
+
+Первый запуск скачает пакет (~30 МБ) и откроет визард прямо в окне. WebUI поднимется на
+`http://localhost:3000`.
+
+Хочешь короче — поставь глобально:
+
+```powershell
+npm install -g @thesashadev/girl-agent
+girl-agent
+```
+
+Если нужен системный лоток и автозапуск — есть нативный десктоп-клиент на Rust в
+[Releases](https://github.com/TheSashaDev/girl-agent/releases).
+
+</Tab>
 <Tab value="Linux / macOS / WSL">
 
 ```bash
@@ -51,16 +75,6 @@ docker run -it --rm -p 3000:3000 -v girl-agent-data:/data \
 ```
 
 Открой `http://localhost:3000` в браузере.
-
-</Tab>
-<Tab value="Windows">
-
-Скачай готовый бинарь со страницы [Releases](https://github.com/TheSashaDev/girl-agent/releases)
-и запусти `.exe`. Это десктоп-приложение на Rust, которое ставит всё нужное и открывает
-дашборд.
-
-Альтернатива — WSL (Linux-подсистема): открой Ubuntu из Windows Store и используй
-команду для Linux выше.
 
 </Tab>
 </Tabs>
