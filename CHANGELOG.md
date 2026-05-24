@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.6
+
+Дата: 2026-05-24
+
+- fix termux installer and docs
+
+
 ## 0.4.5
 
 Дата: 2026-05-22
