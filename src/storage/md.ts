@@ -246,7 +246,7 @@ export function sessionDate(tz: string, now = new Date()): string {
 /** Аппенд в session-aware дневник. Используй вместо appendDayLog. */
 export async function appendSessionLog(slug: string, tz: string, line: string, fromId?: number): Promise<void> {
   const day = sessionDate(tz);
-  const suffix = fromId ? ` <!--from:${fromId}-->` : "";
+  const suffix = fromId ? ` ${fromMarker(fromId)}` : "";
   await appendMd(slug, `log/${day}.md`, line + suffix + "\n");
 }
 
@@ -342,20 +342,33 @@ export function parseSessionLogTurns(raw: string, fromId?: number, limit = 30): 
   const turns: StoredConversationTurn[] = [];
   let currentChatMatches = fromId == null;
   for (const line of raw.split(/\r?\n/)) {
-    const user = line.match(/^\[(.+?)\]\s+он\((\d+)\):\s*(.*)$/);
+    const clean = stripLogMetadata(line);
+    const user = clean.match(/^\[(.+?)\]\s+он\((\d+)\):\s*(.*)$/);
     if (user) {
       currentChatMatches = fromId == null || Number(user[2]) === fromId;
       if (currentChatMatches) {
-        turns.push({ role: "user", content: user[3] ?? "", ts: Date.parse(user[1] ?? "") || undefined, fromId: Number(user[2]) });
+        turns.push({ role: "user", content: stripLogMetadata(user[3] ?? ""), ts: Date.parse(user[1] ?? "") || undefined, fromId: Number(user[2]) });
       }
       continue;
     }
-    const assistant = line.match(/^\s*->\s+(?:\[proactive\]\s+)?она:\s*(.*)$/);
+    const assistant = clean.match(/^\s*->\s+(?:\[proactive\]\s+)?она:\s*(.*)$/);
     if (assistant && currentChatMatches) {
-      turns.push({ role: "assistant", content: assistant[1] ?? "" });
+      turns.push({ role: "assistant", content: stripLogMetadata(assistant[1] ?? "") });
     }
   }
   return turns.slice(-limit);
+}
+
+export function stripLogMetadata(text: string): string {
+  return text
+    .replace(/\s*<!--\s*from:\d+\s*-->\s*/g, "")
+    .replace(/\s*‹!?\s*--\s*from:TGIDUSER\s*--\s*›\s*/gi, "")
+    .replace(/\s*<\s*!\s*--\s*from:TGIDUSER\s*--\s*>\s*/gi, "")
+    .trimEnd();
+}
+
+function fromMarker(fromId: number): string {
+  return `<${"!"}--from:${fromId}-->`;
 }
 
 export async function readRecentSessionTurns(slug: string, tz: string, fromId?: number, limit = 30): Promise<StoredConversationTurn[]> {

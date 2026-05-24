@@ -135,10 +135,17 @@ export function ConfigurationPage() {
             : "Userbot подключается под обычный TG-аккаунт. Может писать всем по username/телефону. Используй на своём аккаунте."}</div>
         </div>
         {merged.mode === "bot" ? (
-          <div className="form-row">
-            <label>Bot Token</label>
-            <input className="input" type="password" value={merged.telegram.botToken ?? ""} onChange={e => pfDeep("telegram.botToken", e.target.value)} placeholder="123456789:AAFxxxxxxxxx" />
-            <div className="hint">Получи у <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> командой /newbot</div>
+          <div className="grid cols-2">
+            <div className="form-row">
+              <label>Bot Token</label>
+              <input className="input" type="password" value={merged.telegram.botToken ?? ""} onChange={e => pfDeep("telegram.botToken", e.target.value)} placeholder="123456789:AAFxxxxxxxxx" />
+              <div className="hint">Получи у <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> командой /newbot</div>
+            </div>
+            <div className="form-row">
+              <label>Bot API endpoint (опционально)</label>
+              <input className="input" value={merged.telegram.botApi?.apiRoot ?? ""} onChange={e => pfDeep("telegram.botApi", { ...(merged.telegram.botApi ?? {}), apiRoot: e.target.value || undefined })} placeholder="https://api.telegram.org или свой reverse proxy" />
+              <div className="hint">Для Bot API прокси/локального сервера. Можно оставить пустым.</div>
+            </div>
           </div>
         ) : (
           <div className="grid cols-2">

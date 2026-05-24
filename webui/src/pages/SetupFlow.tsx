@@ -17,6 +17,7 @@ interface DraftState {
   tz: string;
   tgMode: "bot" | "userbot";
   botToken: string;
+  botApiRoot: string;
   // userbot
   userbotMethod: "proxy" | "own";
   apiId: string;
@@ -62,6 +63,7 @@ const defaultDraft = (): DraftState => ({
   tz: "Europe/Kyiv",
   tgMode: "bot",
   botToken: "",
+  botApiRoot: "",
   userbotMethod: "proxy",
   apiId: "",
   apiHash: "",
@@ -317,7 +319,7 @@ export function SetupFlow() {
       const llmPreset = llmPresets.find(p => p.id === d.llmPresetId);
       const comm = comms.find(c => c.id === d.communicationId);
       const tgConfig: ProfileConfig["telegram"] = d.tgMode === "bot"
-        ? { botToken: d.botToken, useWSS: true, proxy: d.proxy || undefined }
+        ? { botToken: d.botToken, useWSS: true, proxy: d.proxy || undefined, botApi: d.botApiRoot ? { apiRoot: d.botApiRoot } : undefined }
         : {
             apiId: d.apiId ? Number(d.apiId) : undefined,
             apiHash: d.apiHash || undefined,
@@ -541,6 +543,11 @@ export function SetupFlow() {
                 </div>
               </div>
             )}
+            <div className="form-row">
+              <label>Прокси (опционально)</label>
+              <input className="input" value={d.proxy} onChange={e => set("proxy", e.target.value)} placeholder="socks5://user:pass@host:port или tg://proxy?..." />
+              <div className="hint">SOCKS работает для bot/userbot, MTProxy — только для userbot.</div>
+            </div>
           </>
         )}
 
@@ -563,13 +570,20 @@ export function SetupFlow() {
               </div>
             </div>
             {d.tgMode === "bot" ? (
-              <div className="form-row">
-                <label>Bot Token</label>
-                <input className="input" type="password" value={d.botToken} onChange={e => set("botToken", e.target.value)} placeholder="123456789:AAFxxxxxxxxx" />
-                <div className="hint">
-                  1. Открой <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a><br />
-                  2. Команда /newbot, придумай имя и username<br />
-                  3. Скопируй токен сюда
+              <div className="grid cols-2">
+                <div className="form-row">
+                  <label>Bot Token</label>
+                  <input className="input" type="password" value={d.botToken} onChange={e => set("botToken", e.target.value)} placeholder="123456789:AAFxxxxxxxxx" />
+                  <div className="hint">
+                    1. Открой <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a><br />
+                    2. Команда /newbot, придумай имя и username<br />
+                    3. Скопируй токен сюда
+                  </div>
+                </div>
+                <div className="form-row">
+                  <label>Bot API endpoint (опционально)</label>
+                  <input className="input" value={d.botApiRoot} onChange={e => set("botApiRoot", e.target.value)} placeholder="https://api.telegram.org или свой reverse proxy" />
+                  <div className="hint">Если Telegram Bot API заблокирован — укажи свой proxy/local Bot API endpoint.</div>
                 </div>
               </div>
             ) : (

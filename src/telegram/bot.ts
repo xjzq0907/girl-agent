@@ -1,5 +1,6 @@
 import { Bot } from "grammy";
 import path from "node:path";
+import { SocksProxyAgent } from "socks-proxy-agent";
 import type { ProfileConfig } from "../types.js";
 import type { IncomingMedia, IncomingMessage, TgAdapter } from "./index.js";
 import { hasSpoilers, toHtmlWithSpoilers } from "./markdown.js";
@@ -8,7 +9,7 @@ import { normalizeBotReactionEmoji } from "./reactions.js";
 export function makeBotAdapter(cfg: ProfileConfig): TgAdapter {
   const token = cfg.telegram.botToken;
   if (!token) throw new Error("BOT_TOKEN missing");
-  const bot = new Bot(token);
+  const bot = new Bot(token, botConfig(cfg));
   let selfInfo: { username?: string; displayName?: string } = {};
 
   return {
@@ -169,4 +170,35 @@ function mimeTypeForTelegramPath(filePath: string): string {
   if (ext === ".gif") return "image/gif";
   if (ext === ".webp") return "image/webp";
   return "image/jpeg";
+}
+
+function botConfig(cfg: ProfileConfig): ConstructorParameters<typeof Bot>[1] {
+  const client: NonNullable<ConstructorParameters<typeof Bot>[1]>["client"] = {};
+  const apiRoot = normalizeBotApiRoot(cfg.telegram.botApi?.apiRoot ?? process.env.GIRL_AGENT_BOT_API_ROOT);
+  if (apiRoot) client.apiRoot = apiRoot;
+  const proxy = cfg.telegram.proxy;
+  if (proxy) {
+    if (proxy.MTProxy) {
+      process.stderr.write("[bot] MTProxy не поддерживается Bot API; используй socks5:// или botApi.apiRoot\n");
+    } else {
+      client.baseFetchConfig = {
+        agent: new SocksProxyAgent(botSocksProxyUrl(proxy))
+      } as NonNullable<typeof client.baseFetchConfig>;
+    }
+  }
+  return Object.keys(client).length ? { client } : undefined;
+}
+
+function normalizeBotApiRoot(raw: string | undefined): string | undefined {
+  const value = raw?.trim();
+  if (!value) return undefined;
+  return value.replace(/\/+$/, "");
+}
+
+function botSocksProxyUrl(proxy: NonNullable<ProfileConfig["telegram"]["proxy"]>): string {
+  const proto = proxy.socksType === 4 ? "socks4" : "socks5";
+  const auth = proxy.username
+    ? `${encodeURIComponent(proxy.username)}${proxy.password ? `:${encodeURIComponent(proxy.password)}` : ""}@`
+    : "";
+  return `${proto}://${auth}${proxy.ip}:${proxy.port}`;
 }

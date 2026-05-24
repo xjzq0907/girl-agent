@@ -3,6 +3,7 @@ const JAILBREAK_RE = /(?:ignore|forget|disregard|reveal|print|show|dump|system p
 const TECHNICAL_ERROR_RE = /(?:api|apikey|api key|quota|balance|billing|rate limit|429|401|403|500|timeout|ECONN|ENOTFOUND|ETIMEDOUT|overloaded|insufficient_quota|credit|credits|anthropic|openai|groq|openrouter|stack trace|exception|typescript|telegram error)/i;
 const CJK_RE = /[\u3400-\u9fff\uf900-\ufaff]/g;
 const LATIN_JOINED_TO_CYRILLIC_RE = /([A-Za-z]{3,})(?=[А-Яа-яЁё])|(?<=[А-Яа-яЁё])([A-Za-z]{3,})/g;
+const META_IDENTITY_RE = /(?:\b(?:i\s+need\s+to\s+be\s+upfront|i\s*(?:am|'m)\s+(?:claude|chatgpt|an?\s+ai|an?\s+assistant)|as\s+an?\s+ai|ai\s+coding\s+assistant|large\s+language\s+model|i\s+do\s+not\s+have\s+(?:personal\s+)?(?:preferences|stickers|relationships)|previous\s+relationship\s+with\s+you|there\s+may\s+be\s+(?:a\s+)?mistake)|как\s+(?:ии|искусственный\s+интеллект|модель|ассистент)|я\s+(?:ии|искусственный\s+интеллект|нейросеть|модель|ассистент)|у\s+меня\s+нет\s+(?:личных\s+)?(?:предпочтений|отношений|стикеров))/i;
 
 export function looksLikeJailbreak(text: string): boolean {
   return JAILBREAK_RE.test(text);
@@ -80,8 +81,13 @@ export function sanitizeModelReply(reply: string): string {
       .replace(/[ \t]{2,}/g, " ")
   ).trim();
   if (!cleaned || TECHNICAL_ERROR_RE.test(cleaned)) return "";
+  if (looksLikeMetaIdentityLeak(cleaned)) return "";
   if (looksLikeJailbreak(cleaned) && cleaned.length > 80) return "";
   return cleaned;
+}
+
+export function looksLikeMetaIdentityLeak(text: string): boolean {
+  return META_IDENTITY_RE.test(text);
 }
 
 export function isTechnicalError(e: unknown): boolean {

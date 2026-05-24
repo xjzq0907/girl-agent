@@ -5,7 +5,7 @@ import {
   readSessionLog, listSessionDays, listDailySummaries, readDailySummary
 } from "../../storage/md.js";
 import type { ProfileConfig } from "../../types.js";
-import { parseTelegramProxyInput } from "../../telegram/proxy-parse.js";
+import { formatTelegramProxy, parseTelegramProxyInput } from "../../telegram/proxy-parse.js";
 import { bus } from "../runtime-bus.js";
 import { findStage } from "../../presets/stages.js";
 import { ensurePersonaPack, generatePersonaPack } from "../../engine/persona-gen.js";
@@ -70,7 +70,7 @@ export function registerProfileRoutes(r: Router): void {
     const cfg = await readConfig(params.slug ?? "");
     if (!cfg) throw new HttpError(404, "profile not found");
     const status = bus.status(cfg.slug);
-    return { config: cfg, status };
+    return { config: configForWeb(cfg), status };
   });
 
   r.put("/api/profiles/:slug", async ({ params, body }) => {
@@ -89,7 +89,7 @@ export function registerProfileRoutes(r: Router): void {
       };
     }
     await writeConfig(merged);
-    return { config: merged };
+    return { config: configForWeb(merged) };
   });
 
   r.post("/api/profiles", async ({ body }) => {
@@ -125,7 +125,7 @@ export function registerProfileRoutes(r: Router): void {
       busySchedule: data.busySchedule ?? []
     };
     await writeConfig(cfg);
-    return { config: cfg };
+    return { config: configForWeb(cfg) };
   });
 
   r.delete("/api/profiles/:slug", async ({ params }) => {
@@ -349,4 +349,18 @@ export function registerProfileRoutes(r: Router): void {
     const preset = findPreset(id);
     return { preset: preset ?? null };
   });
+}
+
+type WebProfileConfig = Omit<ProfileConfig, "telegram"> & {
+  telegram: Omit<ProfileConfig["telegram"], "proxy"> & { proxy?: string };
+};
+
+function configForWeb(cfg: ProfileConfig): WebProfileConfig {
+  return {
+    ...cfg,
+    telegram: {
+      ...cfg.telegram,
+      proxy: formatTelegramProxy(cfg.telegram.proxy) || undefined
+    }
+  };
 }
