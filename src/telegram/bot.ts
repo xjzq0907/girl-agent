@@ -25,7 +25,9 @@ export function makeBotAdapter(cfg: ProfileConfig): TgAdapter {
           messageId: ctx.message.message_id,
           isPrivate: ctx.chat.type === "private",
           fromName: ctx.from?.first_name,
-          media
+          media,
+          replyTo: botReplyContext(ctx.message as any),
+          forward: botForwardContext(ctx.message as any)
         };
         await onMessage(msg);
       });
@@ -129,6 +131,62 @@ export function makeBotAdapter(cfg: ProfileConfig): TgAdapter {
       await bot.stop();
     }
   };
+}
+
+function botReplyContext(message: any): IncomingMessage["replyTo"] {
+  const reply = message.reply_to_message;
+  if (!reply) return undefined;
+  const text = reply.text ?? reply.caption ?? "";
+  return {
+    messageId: reply.message_id,
+    text: text || undefined,
+    fromId: reply.from?.id,
+    fromName: reply.from?.first_name,
+    media: detectBotMediaSync(reply)
+  };
+}
+
+function botForwardContext(message: any): IncomingMessage["forward"] {
+  const origin = message.forward_origin;
+  if (!origin) return undefined;
+  if (origin.type === "user") {
+    return {
+      fromId: origin.sender_user?.id,
+      fromName: origin.sender_user?.first_name,
+      date: typeof origin.date === "number" ? new Date(origin.date * 1000).toISOString() : undefined
+    };
+  }
+  if (origin.type === "hidden_user") {
+    return {
+      fromName: origin.sender_user_name,
+      date: typeof origin.date === "number" ? new Date(origin.date * 1000).toISOString() : undefined
+    };
+  }
+  if (origin.type === "chat") {
+    return {
+      fromName: origin.sender_chat?.title,
+      date: typeof origin.date === "number" ? new Date(origin.date * 1000).toISOString() : undefined
+    };
+  }
+  if (origin.type === "channel") {
+    return {
+      messageId: origin.message_id,
+      fromName: origin.chat?.title,
+      date: typeof origin.date === "number" ? new Date(origin.date * 1000).toISOString() : undefined
+    };
+  }
+  return undefined;
+}
+
+function detectBotMediaSync(message: any): IncomingMedia | undefined {
+  const caption = message.caption || undefined;
+  if (message.photo) return { kind: "photo", caption, fileId: message.photo.at(-1)?.file_id };
+  if (message.voice) return { kind: "voice", caption, fileId: message.voice.file_id, mimeType: message.voice.mime_type };
+  if (message.video_note) return { kind: "video_note", caption, fileId: message.video_note.file_id };
+  if (message.video) return { kind: "video", caption, fileId: message.video.file_id, mimeType: message.video.mime_type };
+  if (message.sticker) return { kind: "sticker", caption, fileId: message.sticker.file_id, emoji: message.sticker.emoji };
+  if (message.document) return { kind: "document", caption, fileId: message.document.file_id, mimeType: message.document.mime_type };
+  return undefined;
 }
 
 async function detectBotMedia(bot: Bot, token: string, message: any): Promise<IncomingMedia | undefined> {

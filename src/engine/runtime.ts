@@ -317,8 +317,13 @@ export class Runtime extends EventEmitter {
 
   private mediaAwareText(m: IncomingMessage): string {
     const media = describeIncomingMedia(m.media);
-    if (!media) return m.text;
-    return m.text ? `${media}\n${m.text}` : media;
+    const context = incomingMessageContextText(m);
+    const body = media ? (m.text ? `${media}\n${m.text}` : media) : m.text;
+    return context ? `${context}\n${body}` : body;
+  }
+
+  private rawIncomingText(m: IncomingMessage): string {
+    return m.media?.caption ?? m.text;
   }
 
   private async rememberSharedCrossChat(fromId: number, incomingText: string): Promise<void> {
@@ -679,7 +684,8 @@ false — если ответ раскрывает что она ИИ/Claude/Cha
       void addStickerToLibrary(this.cfg, m.media.fileId, m.media.emoji ?? "", ["received"]);
     }
 
-    const requestedMedia = this.requestedOutgoingMedia(m.text);
+    const plainIncomingText = this.rawIncomingText(m);
+    const requestedMedia = this.requestedOutgoingMedia(plainIncomingText);
     if (requestedMedia) {
       const scope = isPrimary ? "primary" : "acquaintance";
       let bubbles: string[] = [];
@@ -692,7 +698,7 @@ false — если ответ раскрывает что она ИИ/Claude/Cha
       return;
     }
 
-    if (looksLikeJailbreak(m.text)) {
+    if (looksLikeJailbreak(plainIncomingText)) {
       let bubbles: string[] = [];
       try {
         bubbles = await this.generateJailbreakReaction(incomingText, isPrimary ? "primary" : "acquaintance");
@@ -1880,6 +1886,31 @@ function smartSplitBubbles(reply: string, expectedBubbles: number): string[] {
   }
 
   return lines;
+}
+
+function incomingMessageContextText(m: IncomingMessage): string {
+  const parts: string[] = [];
+  if (m.replyTo) {
+    const author = contextAuthor(m.replyTo);
+    parts.push(`[ответ на сообщение${author ? ` от ${author}` : ""}: ${incomingContextBody(m.replyTo)}]`);
+  }
+  if (m.forward) {
+    const author = contextAuthor(m.forward);
+    parts.push(`[пересланное сообщение${author ? ` от ${author}` : ""}: ${incomingContextBody(m.forward)}]`);
+  }
+  return parts.join("\n");
+}
+
+function contextAuthor(ctx: { fromName?: string; fromId?: number }): string | undefined {
+  return ctx.fromName ?? (ctx.fromId ? String(ctx.fromId) : undefined);
+}
+
+function incomingContextBody(ctx: { text?: string; media?: IncomingMessage["media"] }): string {
+  const media = describeIncomingMedia(ctx.media);
+  const text = ctx.text?.trim();
+  if (media && text) return `${media}; ${text}`.slice(0, 500);
+  if (media) return media.slice(0, 500);
+  return (text || "без текста").slice(0, 500);
 }
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
