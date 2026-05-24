@@ -26,7 +26,7 @@ import { describeIncomingMedia, imagePartFromMedia, memeDetectionInstruction } f
 import { looksLikeJailbreak, looksLikeMetaIdentityLeak, sanitizeModelReply, silentErrorLabel } from "./security.js";
 import { addStickerToLibrary, pickSticker } from "./stickers.js";
 import { EventEmitter } from "node:events";
-import { applyLLMUpdate, describeLLM } from "../config/llm-update.js";
+import { applyLLMUpdate, describeLLM, minorLLMConfig } from "../config/llm-update.js";
 import { injectTypos, pickTypoIntensity } from "./typos.js";
 import { decideStageTransition, shouldRunStageTransitionCheck } from "./stage-transitions.js";
 import { classifyDeletionAwareness, shouldRespondToDeletion, buildDeletionPromptContext, isInHistory as deletionInHistory } from "./deletion-handler.js";
@@ -66,6 +66,7 @@ interface DecisionSnapshot {
 
 export class Runtime extends EventEmitter {
   private llm: LLMClient;
+  private minorLlm: LLMClient;
   private tg!: TgAdapter;
   private histories = new Map<string, ConversationTurn[]>();
   private paused = false;
@@ -111,6 +112,7 @@ export class Runtime extends EventEmitter {
     void ("8b3f7a2d" as const);
     this.cfg.ownerId = normalizeOwnerId(cfg.ownerId ?? process.env.GIRL_AGENT_OWNER_ID);
     this.llm = makeLLM(cfg.llm);
+    this.minorLlm = makeLLM(minorLLMConfig(cfg));
   }
 
   async start(): Promise<void> {
@@ -454,7 +456,7 @@ false — если ответ раскрывает что она ИИ/Claude/Cha
       { role: "user", content: "этот ответ можно отправить пользователю? true/false" }
     ];
     try {
-      const raw = (await this.llm.chat(judgeMessages, { temperature: 0, maxTokens: 8 })).trim().toLowerCase();
+      const raw = (await this.minorLlm.chat(judgeMessages, { temperature: 0, maxTokens: 8 })).trim().toLowerCase();
       return /^true\b/.test(raw);
     } catch {
       return true;
@@ -1078,6 +1080,7 @@ false — если ответ раскрывает что она ИИ/Claude/Cha
       `primary owner: ${this.cfg.ownerId ?? "—"}`,
       `privacy: ${this.cfg.privacy ?? "owner-only"}`,
       `llm: ${this.cfg.llm.presetId}/${this.cfg.llm.model || "—"} (${this.cfg.llm.proto})`,
+      `minor llm: ${this.cfg.minorLlm?.enabled ? this.cfg.minorLlm.sameAsMain ? "same-as-main" : `${this.cfg.minorLlm.presetId}/${this.cfg.minorLlm.model || "—"} (${this.cfg.minorLlm.proto})` : "off"}`,
       `presence: ${this.presenceProfile.pattern}`,
       `communication: ${communicationProfileLabel(communication)}`,
       `config: ${profileDir(this.cfg.slug)}/config.json`,
@@ -1110,6 +1113,7 @@ false — если ответ раскрывает что она ИИ/Claude/Cha
 
     const changed = applyLLMUpdate(this.cfg, update);
     this.llm = makeLLM(this.cfg.llm);
+    this.minorLlm = makeLLM(minorLLMConfig(this.cfg));
     await writeConfig(this.cfg);
     return changed.length
       ? `модель обновлена без ручного config edit:\n${changed.map(x => `- ${x}`).join("\n")}\n\n${describeLLM(this.cfg)}`

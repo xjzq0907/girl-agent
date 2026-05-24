@@ -433,7 +433,7 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error ?? "");
 }
 
-export function makeLLM(cfg: ProfileConfig["llm"]): LLMClient {
+export function makeLLM(cfg: ProfileConfig["llm"] | NonNullable<ProfileConfig["minorLlm"]>): LLMClient {
   const inner = cfg.proto === "anthropic" ? new AnthropicLike(cfg) : new OpenAILike(cfg);
   return new SerializedLLMClient(inner);
 }

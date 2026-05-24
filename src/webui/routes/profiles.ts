@@ -10,7 +10,7 @@ import { bus } from "../runtime-bus.js";
 import { findStage } from "../../presets/stages.js";
 import { ensurePersonaPack, generatePersonaPack } from "../../engine/persona-gen.js";
 import { makeLLM } from "../../llm/index.js";
-import { applyLLMUpdate, describeLLM } from "../../config/llm-update.js";
+import { applyLLMUpdate, describeLLM, resolveLLMUpdate } from "../../config/llm-update.js";
 import { findPreset } from "../../presets/llm.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -80,6 +80,7 @@ export function registerProfileRoutes(r: Router): void {
     const incoming = body as Partial<ProfileConfig>;
     if (!incoming || typeof incoming !== "object") throw new HttpError(400, "invalid body");
     const merged: ProfileConfig = { ...cur, ...incoming, slug: cur.slug };
+    if (incoming.minorLlm) merged.minorLlm = normalizeMinorLlm(cur, incoming.minorLlm);
     if (incoming.ownerId !== undefined) merged.ownerId = normalizeOwnerId(incoming.ownerId);
     if (incoming.telegram) {
       merged.telegram = {
@@ -99,6 +100,7 @@ export function registerProfileRoutes(r: Router): void {
     const existing = await readConfig(slug);
     if (existing) throw new HttpError(409, `profile already exists: ${slug}`);
     const incomingTg = data.telegram ?? {};
+    const llm = data.llm ?? { presetId: "claudehub", proto: "anthropic" as const, apiKey: "", model: "claude-sonnet-4.6" };
     const cfg: ProfileConfig = {
       slug,
       name: data.name,
@@ -107,7 +109,8 @@ export function registerProfileRoutes(r: Router): void {
       tz: data.tz ?? "Europe/Moscow",
       mode: data.mode ?? "bot",
       stage: data.stage ?? "tg-given-cold",
-      llm: data.llm ?? { presetId: "claudehub", proto: "anthropic", apiKey: "", model: "claude-sonnet-4.6" },
+      llm,
+      minorLlm: normalizeMinorLlm({ llm }, data.minorLlm),
       telegram: {
         ...incomingTg,
         proxy: parseTelegramProxyInput(incomingTg.proxy as unknown as string | undefined)
@@ -349,6 +352,23 @@ export function registerProfileRoutes(r: Router): void {
     const preset = findPreset(id);
     return { preset: preset ?? null };
   });
+}
+
+function normalizeMinorLlm(cfg: Pick<ProfileConfig, "llm">, incoming: ProfileConfig["minorLlm"]): ProfileConfig["minorLlm"] {
+  if (!incoming?.enabled) return undefined;
+  if (incoming.sameAsMain) {
+    return {
+      enabled: true,
+      sameAsMain: true,
+      presetId: cfg.llm.presetId,
+      proto: cfg.llm.proto,
+      baseURL: cfg.llm.baseURL,
+      apiKey: cfg.llm.apiKey,
+      model: cfg.llm.model
+    };
+  }
+  const { next } = resolveLLMUpdate(incoming, incoming);
+  return { ...next, enabled: true, sameAsMain: false };
 }
 
 type WebProfileConfig = Omit<ProfileConfig, "telegram"> & {

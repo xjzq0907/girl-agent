@@ -126,6 +126,15 @@ export interface ProfileConfig {
     /** Unix ms when the current access token expires */
     oauthExpiresAt?: number;
   };
+  minorLlm?: {
+    enabled: boolean;
+    sameAsMain?: boolean;
+    presetId: string;
+    proto: LLMProto;
+    baseURL?: string;
+    apiKey: string;
+    model: string;
+  };
   telegram: {
     botToken?: string;
     apiId?: number;
