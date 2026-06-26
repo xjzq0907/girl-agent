@@ -2,13 +2,13 @@ import http from "node:http";
 import { URL } from "node:url";
 
 /**
- * Минимальный HTTP-роутер на встроенном node:http.
- * Не тащим Express/Fastify — для небольшого числа endpoints это лишний вес.
+ * 基于内置 node:http 的最小化 HTTP 路由器。
+ * 不使用 Express/Fastify — 对于少量端点来说它们太重了。
  *
- * Конвенции:
- * - JSON-ответы автоматом сериализуются + Content-Type: application/json
- * - Ошибки бросаем через HttpError(status, message)
- * - Path-параметры — через :name (например /api/profiles/:slug)
+ * 约定:
+ * - JSON 响应自动序列化 + Content-Type: application/json
+ * - 错误通过 HttpError(status, message) 抛出
+ * - 路径参数 — 使用 :name (例如 /api/profiles/:slug)
  */
 
 export class HttpError extends Error {

@@ -11,8 +11,8 @@ export const LLM_PRESETS: LLMPreset[] = [
     recommended: false,
     oauth: true,
     disabled: true,
-    disabledReason: "временно недоступен",
-    hint: "временно недоступен · OpenAI-compatible gateway"
+    disabledReason: "暂时不可用",
+    hint: "暂时不可用 · OpenAI-compatible gateway"
   },
   {
     id: "claudehub",
@@ -22,7 +22,7 @@ export const LLM_PRESETS: LLMPreset[] = [
     defaultModel: "claude-sonnet-4.6",
     models: ["claude-opus-4.7", "claude-opus-4.6", "claude-opus-4.5", "claude-sonnet-4.6", "claude-sonnet-4.5", "claude-haiku-4.5", "gpt-5.5", "gpt-5.4"],
     recommended: true,
-    hint: "рекомендуемый · ClaudeHub proxy for Anthropic & OpenAI (РФ, СБП, крипта)"
+    hint: "推荐 · ClaudeHub (Anthropic & OpenAI 代理, 支持国际支付)"
   },
   {
     id: "openai",
@@ -40,7 +40,7 @@ export const LLM_PRESETS: LLMPreset[] = [
     defaultApiKey: "lm-studio",
     apiKeyRequired: false,
     custom: true,
-    hint: "локально, OpenAI-compatible endpoint; ключ не нужен"
+    hint: "本地运行, OpenAI 兼容接口; 无需密钥"
   },
   {
     id: "ollama",
@@ -51,7 +51,7 @@ export const LLM_PRESETS: LLMPreset[] = [
     defaultApiKey: "ollama",
     apiKeyRequired: false,
     custom: true,
-    hint: "локально через /v1; ключ не нужен"
+    hint: "本地运行 (通过 /v1); 无需密钥"
   },
   {
     id: "anthropic",

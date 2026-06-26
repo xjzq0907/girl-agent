@@ -3,13 +3,13 @@ import { useStore } from "../lib/store";
 import type { Tab } from "../lib/store";
 
 const ITEMS: { id: Tab; label: string; icon: string }[] = [
-  { id: "assistant", label: "Помощник", icon: "✦" },
-  { id: "logs", label: "Логи / статус", icon: "≡" },
-  { id: "relationship", label: "Отношения", icon: "♥" },
-  { id: "configuration", label: "Конфигурация", icon: "⚙" },
-  { id: "memory", label: "Память", icon: "❀" },
-  { id: "addons", label: "Аддоны", icon: "◉" },
-  { id: "diagnostics", label: "Диагностика", icon: "✓" }
+  { id: "assistant", label: "助手", icon: "✦" },
+  { id: "logs", label: "日志 / 状态", icon: "≡" },
+  { id: "relationship", label: "关系", icon: "♥" },
+  { id: "configuration", label: "配置", icon: "⚙" },
+  { id: "memory", label: "记忆", icon: "❀" },
+  { id: "addons", label: "插件", icon: "◉" },
+  { id: "diagnostics", label: "诊断", icon: "✓" }
 ];
 
 export function Sidebar() {
@@ -44,10 +44,10 @@ export function Sidebar() {
         <div className="profile-picker" onClick={() => setPickerOpen(!pickerOpen)}>
           <div className="pp-avatar">{initial}</div>
           <div className="pp-info">
-            <div className="pp-name">{active?.name ?? "Создать профиль"}</div>
+            <div className="pp-name">{active?.name ?? "创建配置文件"}</div>
             <div className="pp-meta">
               <span className={`pp-dot ${stateClass}`} />
-              {active ? `${active.age}, ${active.mode}, ${stateLabel(active.status)}` : "нет профилей"}
+              {active ? `${active.age}, ${active.mode}, ${stateLabel(active.status)}` : "无配置文件"}
             </div>
           </div>
           <span style={{ color: "var(--ga-text-faint)", fontSize: 11 }}>⇅</span>
@@ -76,8 +76,8 @@ export function Sidebar() {
             >
               <div className="pp-avatar" style={{ background: "rgba(255, 255, 255, 0.08)", color: "var(--ga-text-dim)" }}>+</div>
               <div className="pp-info">
-                <div className="pp-name">Новый профиль</div>
-                <div className="pp-meta">через Setup Flow</div>
+                <div className="pp-name">新建配置文件</div>
+                <div className="pp-meta">通过设置流程</div>
               </div>
             </div>
           </div>
@@ -101,11 +101,11 @@ export function Sidebar() {
         <div className="nav">
           <div className="nav-item" onClick={toggleTheme}>
             <span className="icon">{theme === "dark" ? "☾" : "☀"}</span>
-            {theme === "dark" ? "Тёмная тема" : "Светлая тема"}
+            {theme === "dark" ? "深色主题" : "浅色主题"}
           </div>
         </div>
         <div style={{ fontSize: 11, color: "var(--ga-text-faint)", padding: "2px 8px" }}>
-          {activeConfig?.slug ? `slug: ${activeConfig.slug}` : "нет активного профиля"}
+          {activeConfig?.slug ? `slug: ${activeConfig.slug}` : "无活动配置文件"}
         </div>
       </div>
     </>
@@ -114,10 +114,10 @@ export function Sidebar() {
 
 function stateLabel(s: string): string {
   switch (s) {
-    case "running": return "работает";
-    case "paused": return "пауза";
-    case "error": return "ошибка";
+    case "running": return "运行中";
+    case "paused": return "已暂停";
+    case "error": return "错误";
     case "stopped":
-    default: return "остановлен";
+    default: return "已停止";
   }
 }

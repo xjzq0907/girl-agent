@@ -6,7 +6,7 @@ interface Msg {
   role: "user" | "assistant" | "tool";
   content: string;
   toolCalls?: { tool: string; args: Record<string, unknown> }[];
-  /** Вопрос от ассистента — кнопки для выбора */
+  /** 来自助手的问题 — 选择按钮 */
   question?: AssistantQuestion;
 }
 
@@ -15,14 +15,14 @@ interface AssistantQuestion {
   options: { label: string; description?: string }[];
 }
 
-const GREETING = "Привет! Я встроенный помощник. Спроси про любые настройки, попроси сменить стадию или ignoreTendency, объясни ошибки из логов — я помогу.";
+const GREETING = "你好！我是内置助手。询问任何设置，要求更改阶段或 ignoreTendency，解释日志中的错误 — 我来帮你。";
 
 /**
- * Парсим <question> блок из ответа ассистента.
- * Формат:
- * <question text="Какой стиль общения?">
- *   <option label="Тёплый">Дружелюбный и нежный</option>
- *   <option label="Холодный">Цундере</option>
+ * 解析助手回复中的 <question> 块。
+ * 格式:
+ * <question text="什么样的沟通风格?">
+ *   <option label="温暖">友好温柔</option>
+ *   <option label="高冷">傲娇</option>
  * </question>
  */
 function parseQuestion(text: string): { clean: string; question?: AssistantQuestion } {
@@ -35,7 +35,7 @@ function parseQuestion(text: string): { clean: string; question?: AssistantQuest
   for (const om of optMatches) {
     options.push({ label: om[1] ?? "", description: (om[2] ?? "").trim() || undefined });
   }
-  // Также парсим короткий формат: <option label="..."/>
+  // 同时解析短格式: <option label="..."/>
   const shortOptMatches = [...body.matchAll(/<option\s+label="([^"]*)"\s*\/>/g)];
   for (const om of shortOptMatches) {
     if (!options.some(o => o.label === om[1])) {
@@ -76,7 +76,7 @@ export function AssistantPage() {
       setMessages(prev => [...prev, reply]);
       if (question) setPendingQuestion(question);
     } catch (e) {
-      setMessages(prev => [...prev, { role: "assistant", content: `(ошибка: ${(e as Error)?.message})` }]);
+      setMessages(prev => [...prev, { role: "assistant", content: `(错误: ${(e as Error)?.message})` }]);
     } finally {
       setBusy(false);
     }
@@ -94,23 +94,23 @@ export function AssistantPage() {
     const msg = messages[idx];
     if (!msg?.toolCalls?.[tcIdx]) return;
     if (!activeSlug) {
-      toast("Сначала выберите профиль", "error");
+      toast("请先选择个人资料", "error");
       return;
     }
     const toolKey = `${idx}-${tcIdx}`;
     if (appliedTools.has(toolKey)) {
-      toast("Уже применено", "info");
+      toast("已应用", "info");
       return;
     }
     const tc = msg.toolCalls[tcIdx];
     try {
       const r = await api.applyAssistantTool(activeSlug, tc);
-      toast(`Применено: ${r.message}`, "success");
+      toast(`已应用: ${r.message}`, "success");
       setAppliedTools(prev => new Set([...prev, toolKey]));
       await refreshActive();
       setMessages(prev => [...prev, { role: "tool", content: `✓ ${tc.tool}: ${r.message}` }]);
     } catch (e) {
-      toast(`Ошибка: ${(e as Error)?.message}`, "error");
+      toast(`错误: ${(e as Error)?.message}`, "error");
     }
   }
 
@@ -132,7 +132,7 @@ export function AssistantPage() {
                     disabled={applied}
                     onClick={() => void applyTool(i, j)}
                   >
-                    {applied ? "Применено ✓" : "Применить"}
+                    {applied ? "已应用 ✓" : "应用"}
                   </button>
                 </div>
               );
@@ -157,10 +157,10 @@ export function AssistantPage() {
             )}
           </div>
         ))}
-        {busy && <div className="chat-msg assistant"><span className="spinner" /> думаю...</div>}
+        {busy && <div className="chat-msg assistant"><span className="spinner" /> 思考中...</div>}
       </div>
 
-      {/* Кнопки вопроса над инпутом */}
+      {/* 输入框上方的提问按钮 */}
       {pendingQuestion && !busy && (
         <div className="question-bar">
           <div className="question-bar-text">{pendingQuestion.text}</div>
@@ -181,14 +181,14 @@ export function AssistantPage() {
 
       <div className="chat-input">
         <textarea
-          placeholder={pendingQuestion ? "или напиши свой вариант..." : "спроси меня что-нибудь..."}
+          placeholder={pendingQuestion ? "或者写你自己的选项..." : "问我点什么..."}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
           }}
         />
-        <button className="btn primary" disabled={busy || !draft.trim()} onClick={send}>Отправить</button>
+        <button className="btn primary" disabled={busy || !draft.trim()} onClick={send}>发送</button>
       </div>
     </div>
   );

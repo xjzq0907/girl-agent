@@ -44,7 +44,7 @@ export function registerPresetRoutes(r: Router): void {
 
   r.get("/api/presets/timezones", ({ searchParams }) => {
     const q = searchParams.get("q") ?? "";
-    // Без поиска — возвращаем все таймзоны (UA → CIS → RU), фронту нужен полный список.
+    // 不搜索时 — 返回所有时区 (UA → CIS → RU)，前端需要完整列表。
     const all = q ? findTzByQuery(q, 200) : TIMEZONES;
     return { zones: all.map(t => ({ iana: t.iana, gmtWinter: t.gmtWinter, city: t.city, country: t.country, aliases: t.aliases, group: t.group })) };
   });

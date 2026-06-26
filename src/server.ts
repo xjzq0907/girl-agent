@@ -50,11 +50,11 @@ interface ServerArgs {
 }
 
 const SERVER_HELP = `
-girl-agent server — automation / ops mode (no TTY required)
+girl-agent server — 自动化 / 运维模式（不需要 TTY）
 
-usage:
+用法:
   girl-agent server --print-config > bot.json
-  # отредактируй bot.json
+  # 编辑 bot.json
   girl-agent server --config bot.json --headless
 
   girl-agent server --list
@@ -65,16 +65,16 @@ usage:
   girl-agent server --print-systemd > /etc/systemd/system/girl-agent.service
   girl-agent server --print-docker
 
-env-vars (для CI / docker secrets / k8s):
-  GIRL_AGENT_DATA           путь к профилям (default: ./data)
+环境变量（用于 CI / docker secrets / k8s）:
+  GIRL_AGENT_DATA           配置文件路径 (default: ./data)
   GIRL_AGENT_MODE           bot|userbot
   GIRL_AGENT_TOKEN          telegram bot token
   GIRL_AGENT_API_PRESET     openai|anthropic|claudehub|...
-  GIRL_AGENT_API_KEY        ключ от провайдера
-  GIRL_AGENT_MODEL, _NAME, _AGE, _NATIONALITY, _TZ, _STAGE (id или номер 1-8), _COMM_PRESET, _IGNORE_TENDENCY, _OWNER_ID
+  GIRL_AGENT_API_KEY        来自服务提供商的密钥
+  GIRL_AGENT_MODEL, _NAME, _AGE, _NATIONALITY, _TZ, _STAGE（id 或编号 1-8）, _COMM_PRESET, _IGNORE_TENDENCY, _OWNER_ID
 
-для интерактивной первичной настройки запускай без флагов —
-откроется WebUI на http://localhost:3000 (в docker используй -p 3000:3000).
+要进行交互式初始设置，请不要使用任何参数运行 —
+WebUI 将在 http://localhost:3000 打开（在 docker 中使用 -p 3000:3000）。
 `;
 
 function parseServerArgs(argv: Record<string, unknown>): ServerArgs {
@@ -109,28 +109,28 @@ export async function runServer(rawArgv: Record<string, unknown>): Promise<void>
 
   if (args.list) {
     const list = await listProfiles();
-    process.stdout.write(list.length ? list.join("\n") + "\n" : "(нет профилей)\n");
+    process.stdout.write(list.length ? list.join("\n") + "\n" : "(无配置)\n");
     process.stdout.write(`data: ${DATA_ROOT}\n`);
     return;
   }
 
   if (args.deleteProfile) {
     if (!args.profile) {
-      process.stderr.write("--delete-profile требует --profile=<slug>\n");
+      process.stderr.write("--delete-profile 需要 --profile=<slug>\n");
       process.exit(1);
     }
     if (!args.yes) {
-      process.stderr.write(`профиль НЕ удалён: добавь --yes для подтверждения.\nбудет удалено: ${path.join(DATA_ROOT, args.profile)}\n`);
+      process.stderr.write(`配置未删除：添加 --yes 以确认。\n将删除: ${path.join(DATA_ROOT, args.profile)}\n`);
       process.exit(1);
     }
     await deleteProfile(args.profile);
-    process.stdout.write(`профиль удалён: ${args.profile}\ndata: ${DATA_ROOT}\n`);
+    process.stdout.write(`配置已删除: ${args.profile}\ndata: ${DATA_ROOT}\n`);
     return;
   }
 
   if (args.setModel) {
     if (!args.profile) {
-      process.stderr.write("--set-model требует --profile=<slug>\n");
+      process.stderr.write("--set-model 需要 --profile=<slug>\n");
       process.exit(1);
     }
     const cfg = await readConfig(args.profile);
@@ -146,7 +146,7 @@ export async function runServer(rawArgv: Record<string, unknown>): Promise<void>
       proto: rawArgv.proto === "anthropic" ? "anthropic" : rawArgv.proto === "openai" ? "openai" : undefined
     });
     await writeConfig(cfg);
-    process.stdout.write((changed.length ? changed.map(x => `- ${x}`).join("\n") : "ничего не изменилось") + "\n\n" + describeLLM(cfg) + "\n");
+    process.stdout.write((changed.length ? changed.map(x => `- ${x}`).join("\n") : "无任何更改") + "\n\n" + describeLLM(cfg) + "\n");
     return;
   }
 
@@ -169,38 +169,38 @@ export async function runServer(rawArgv: Record<string, unknown>): Promise<void>
 
   const cfgFromEnv = configFromEnv();
   if (cfgFromEnv) {
-    process.stderr.write("[server] провижу профиль из env vars\n");
+    process.stderr.write("[server] 正在从环境变量配置 profile\n");
     await persistAndMaybeStart(cfgFromEnv, args);
     return;
   }
 
   process.stderr.write(SERVER_HELP);
-  process.stderr.write("\n[server] для интерактивной настройки запусти без флагов в TTY-терминале.\n");
+  process.stderr.write("\n[server] 要进行交互式设置，请在 TTY 终端中不使用任何参数运行。\n");
   process.exit(1);
 }
 
 async function persistAndMaybeStart(cfg: ProfileConfig, args: ServerArgs): Promise<void> {
   await writeConfig(cfg);
-  process.stderr.write(`[server] профиль сохранён: ${path.join(DATA_ROOT, cfg.slug)}\n`);
+  process.stderr.write(`[server] profile 已保存: ${path.join(DATA_ROOT, cfg.slug)}\n`);
 
   if (cfg.llm.apiKey || findPreset(cfg.llm.presetId)?.apiKeyRequired === false) {
     try {
-      process.stderr.write("[server] генерируем persona/speech/communication...\n");
+      process.stderr.write("[server] 正在生成 persona/speech/communication...\n");
       const llm = makeLLM(cfg.llm);
       const generated = await generatePersonaPack(llm, cfg.slug, cfg.name, cfg.age, cfg.nationality, cfg.personaNotes ?? "");
       cfg.busySchedule = generated.busySchedule;
       await writeConfig(cfg);
-      process.stderr.write("[server] персона готова.\n");
+      process.stderr.write("[server] 角色已准备就绪。\n");
     } catch (e) {
-      process.stderr.write(`[server] ошибка генерации персоны: ${(e as Error)?.message ?? e}\n`);
-      process.stderr.write("[server] профиль сохранён, но без persona.md. Можно перегенерировать позже.\n");
+      process.stderr.write(`[server] 角色生成出错: ${(e as Error)?.message ?? e}\n`);
+      process.stderr.write("[server] profile 已保存，但缺少 persona.md。可以稍后重新生成。\n");
     }
   } else {
-    process.stderr.write("[server] api-ключ не задан — пропускаем генерацию персоны.\n");
+    process.stderr.write("[server] 未设置 api 密钥 — 跳过角色生成。\n");
   }
 
   if (args.noStart) {
-    process.stderr.write(`[server] --no-start: запуск пропущен.\n`);
+    process.stderr.write(`[server] --no-start: 已跳过启动。\n`);
     return;
   }
 
@@ -209,7 +209,7 @@ async function persistAndMaybeStart(cfg: ProfileConfig, args: ServerArgs): Promi
 
 async function startRuntime(cfg: ProfileConfig, args: ServerArgs): Promise<void> {
   if (await checkForPendingMigrations()) {
-    process.stderr.write("[updater] обнаружены pending-миграции, запуск...\n");
+    process.stderr.write("[updater] 检测到待处理的迁移，正在启动...\n");
     const result = await runMigrations({
       verbose: true,
       llmFactory: (c) => { try { return makeLLM(c.llm); } catch { return undefined; } }
@@ -228,8 +228,8 @@ async function startRuntime(cfg: ProfileConfig, args: ServerArgs): Promise<void>
     return;
   }
 
-  // Plain text-log mode for non-NDJSON server runs.
-  process.stderr.write(`[server] бот запущен: ${cfg.name} (${cfg.slug})\n`);
+  // 非 NDJSON 服务端运行的纯文本日志模式。
+  process.stderr.write(`[server] bot 已启动: ${cfg.name} (${cfg.slug})\n`);
   rt.on("event", (e) => {
     const ts = new Date().toISOString();
     const t = (e as { type?: string }).type ?? "event";
@@ -237,7 +237,7 @@ async function startRuntime(cfg: ProfileConfig, args: ServerArgs): Promise<void>
   });
 
   const stop = async () => {
-    process.stderr.write("[server] остановка...\n");
+    process.stderr.write("[server] 正在停止...\n");
     await rt.stop();
     process.exit(0);
   };
@@ -301,14 +301,14 @@ async function loadConfigFile(file: string): Promise<ProfileConfig> {
   try {
     raw = await fs.readFile(abs, "utf-8");
   } catch (e) {
-    process.stderr.write(`[server] не могу прочитать ${abs}: ${(e as Error)?.message ?? e}\n`);
+    process.stderr.write(`[server] 无法读取 ${abs}: ${(e as Error)?.message ?? e}\n`);
     process.exit(1);
   }
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (e) {
-    process.stderr.write(`[server] ${abs} не является валидным JSON: ${(e as Error)?.message ?? e}\n`);
+    process.stderr.write(`[server] ${abs} 不是有效的 JSON: ${(e as Error)?.message ?? e}\n`);
     process.exit(1);
   }
   return validateConfig(parsed);
@@ -326,8 +326,8 @@ function validateConfig(raw: unknown): ProfileConfig {
   if (!c.llm?.presetId) errs.push("llm.presetId");
   if (!c.llm?.model) errs.push("llm.model");
   if (errs.length) {
-    process.stderr.write(`[server] конфиг невалиден, недостающие поля:\n  - ${errs.join("\n  - ")}\n`);
-    process.stderr.write(`[server] см. шаблон: girl-agent server --print-config\n`);
+    process.stderr.write(`[server] 配置无效，缺少的字段:\n  - ${errs.join("\n  - ")}\n`);
+    process.stderr.write(`[server] 参考模板: girl-agent server --print-config\n`);
     process.exit(1);
   }
   const filled: ProfileConfig = {
@@ -370,7 +370,7 @@ function parseTelegramProxy(raw: string | undefined): ProfileConfig["telegram"][
 function buildConfigTemplate(): string {
   const sample: ProfileConfig = {
     slug: "anya",
-    name: "Аня",
+    name: "小安",
     age: 22,
     nationality: "RU",
     tz: "Europe/Moscow",
@@ -432,13 +432,13 @@ WantedBy=multi-user.target
 }
 
 function buildDockerArtifacts(): string {
-  return `# === одной командой ===
+  return `# === 单条命令 ===
 docker run -it --rm \\
   -v girl-agent-data:/data \\
   -e GIRL_AGENT_DATA=/data \\
   ghcr.io/thesashadev/girl-agent:latest
 
-# === headless с готовым конфигом ===
+# === 使用现成配置的无头模式 ===
 docker run -d --name girl-agent --restart=unless-stopped \\
   -v girl-agent-data:/data \\
   -v "$PWD/bot.json:/config/bot.json:ro" \\
@@ -446,7 +446,7 @@ docker run -d --name girl-agent --restart=unless-stopped \\
   ghcr.io/thesashadev/girl-agent:latest \\
   server --config /config/bot.json --headless
 
-# === только env vars (без файла) ===
+# === 仅使用环境变量（无配置文件） ===
 docker run -d --name girl-agent --restart=unless-stopped \\
   -v girl-agent-data:/data \\
   -e GIRL_AGENT_DATA=/data \\
@@ -454,7 +454,7 @@ docker run -d --name girl-agent --restart=unless-stopped \\
   -e GIRL_AGENT_TOKEN=... \\
   -e GIRL_AGENT_API_PRESET=claudehub \\
   -e GIRL_AGENT_API_KEY=... \\
-  -e GIRL_AGENT_NAME='Аня' \\
+  -e GIRL_AGENT_NAME='小安' \\
   -e GIRL_AGENT_AGE=22 \\
   ghcr.io/thesashadev/girl-agent:latest \\
   server --headless
@@ -464,7 +464,7 @@ docker run -d --name girl-agent --restart=unless-stopped \\
 # services:
 #   girl-agent:
 #     image: ghcr.io/thesashadev/girl-agent:latest
-#     # interactive WebUI: command: [] and ports: ["3000:3000"]
+#     # 交互式 WebUI: command: [] 并设置 ports: ["3000:3000"]
 #     command: ["server", "--config", "/config/bot.json", "--headless"]
 #     environment:
 #       GIRL_AGENT_DATA: /data

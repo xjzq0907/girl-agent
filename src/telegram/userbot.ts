@@ -1,10 +1,11 @@
 import { TelegramClient, Api } from "telegram";
 import { StringSession } from "telegram/sessions/index.js";
-import type { ProfileConfig } from "../types.js";
+import type { ProfileConfig, TelegramProxyConfig } from "../types.js";
 import type { IncomingForwardContext, IncomingMedia, IncomingMessageContext, TgAdapter } from "./index.js";
 import { NewMessage } from "telegram/events/index.js";
 import { Raw } from "telegram/events/Raw.js";
 import type { ProxyInterface } from "telegram/network/connection/TCPMTProxy.js";
+import { createSocksTunnel } from "./socks-tunnel.js";
 
 const OWNER_PROXY_API_ID = Number(process.env.GIRL_AGENT_OWNER_PROXY_API_ID ?? process.env.GIRL_AGENT_TG_API_ID ?? 0);
 const OWNER_PROXY_API_HASH = process.env.GIRL_AGENT_OWNER_PROXY_API_HASH ?? process.env.GIRL_AGENT_TG_API_HASH ?? "";
@@ -49,21 +50,26 @@ export function makeUserbotAdapter(cfg: ProfileConfig): TgAdapter {
   const session = cfg.telegram.sessionString ?? "";
   const effectiveApiId = apiId || OWNER_PROXY_API_ID;
   const effectiveApiHash = apiHash || OWNER_PROXY_API_HASH;
-  if (!effectiveApiId || !effectiveApiHash) throw new Error("API_ID/API_HASH missing for userbot: выбери «прокси автора» в WebUI или укажи свои api_id/api_hash");
+  if (!effectiveApiId || !effectiveApiHash) throw new Error("API_ID/API_HASH missing for userbot: 在 WebUI 中选择「作者代理」或填写自己的 api_id/api_hash");
 
-  const useWSS = cfg.telegram.useWSS !== false;
   const proxy = clientProxy(cfg);
-  debug(`[userbot] creating TelegramClient (useWSS=${useWSS}${proxy ? ", proxy=on" : ""})…`);
+  // SOCKS5 代理通过本地隧道处理，不走 gramjs 内置 proxy（避免 useWSS 冲突 + 频繁断连）
+  const socksProxy = proxy && !proxy.MTProxy ? proxy : undefined;
+  const gramjsProxy = proxy?.MTProxy ? proxy : undefined;
+  const useWSS = cfg.telegram.useWSS !== false;
+  debug(`[userbot] creating TelegramClient (useWSS=${useWSS}${socksProxy ? ", socks-tunnel=on" : ""}${gramjsProxy ? ", mtproxy=on" : ""})…`);
 
-  const client = new TelegramClient(new StringSession(session), effectiveApiId, effectiveApiHash, {
+  const sessionObj = new StringSession(session);
+  const client = new TelegramClient(sessionObj, effectiveApiId, effectiveApiHash, {
     connectionRetries: 5,
     requestRetries: 5,
     retryDelay: 3000,
     autoReconnect: true,
     floodSleepThreshold: 120,
     useWSS,
-    proxy
+    proxy: gramjsProxy,
   });
+  let tunnelClose: (() => Promise<void>) | undefined;
   client.onError = async () => { /* swallow _updateLoop ping TIMEOUT noise */ };
   let me: Api.User | null = null;
   const peerCache = new Map<string | number, Api.TypeInputPeer>();
@@ -102,6 +108,24 @@ export function makeUserbotAdapter(cfg: ProfileConfig): TgAdapter {
 
   return {
     async start(onMessage) {
+      // 如果有 SOCKS5 代理，启动本地隧道再连接
+      if (socksProxy) {
+        const sessionAny = sessionObj as any;
+        const dcAddr = sessionAny._serverAddress || "149.154.167.50"; // DC2 default
+        const dcPort = useWSS ? 443 : (sessionAny._port || 80);
+        const dcId = sessionAny._dcId || 2;
+        debug(`[userbot] starting SOCKS5 tunnel: 127.0.0.1 -> ${dcAddr}:${dcPort} via ${socksProxy.ip}:${socksProxy.port}`);
+        // WSS 模式下 gramjs 强制连接 443，隧道也必须监听 443
+        const tunnel = await createSocksTunnel({
+          proxyHost: socksProxy.ip,
+          proxyPort: socksProxy.port,
+          targetHost: dcAddr,
+          targetPort: dcPort,
+        }, dcPort);
+        tunnelClose = tunnel.close;
+        sessionObj.setDC(dcId, "127.0.0.1", tunnel.port);
+        debug(`[userbot] tunnel ready on port ${tunnel.port}, DC redirected to localhost`);
+      }
       await connectWithRetry();
       debug("[userbot] getting self info…");
       for (let i = 0; i < 3; i++) {
@@ -116,9 +140,9 @@ export function makeUserbotAdapter(cfg: ProfileConfig): TgAdapter {
         }
       }
       debug("[userbot] registering message handler…");
-      // Кэш последних входящих сообщений по (chatId, messageId) — нужен для Task #15:
-      // когда юзер удаляет сообщение, в raw update приходят только id, текст нужно
-      // восстановить из хранимых буфера.
+      // 最近收到的消息缓存，按 (chatId, messageId) 索引 — 用于 Task #15:
+      // 当用户删除消息时，raw update 中只包含 id，需要从存储的
+      // 缓存中恢复文本内容。
       const incomingCache = new Map<string, { text: string; ts: number; chatId: number | string; isPrivate: boolean; fromId: number; fromName?: string; media?: IncomingMedia }>();
       const cacheKey = (chatId: number | string, messageId: number): string => `${chatId}:${messageId}`;
       const trimIncomingCache = (): void => {
@@ -147,7 +171,7 @@ export function makeUserbotAdapter(cfg: ProfileConfig): TgAdapter {
           }
           const replyTo = await userbotReplyContext(m);
           const forward = userbotForwardContext(m);
-          // Кэшируем для Task #15 (deletion handler).
+          // 为 Task #15 缓存（删除消息处理器）。
           incomingCache.set(cacheKey(chatId, Number(m.id)), {
             text,
             ts: Date.now(),
@@ -173,13 +197,13 @@ export function makeUserbotAdapter(cfg: ProfileConfig): TgAdapter {
         }
       }, new NewMessage({}));
 
-      // === Task #15: Raw обработчик UpdateDeleteMessages / UpdateDeleteChannelMessages ===
+      // === Task #15: Raw 处理器 UpdateDeleteMessages / UpdateDeleteChannelMessages ===
       client.addEventHandler(async (update: any) => {
         try {
           const cls = update?.className ?? update?.constructor?.name ?? "";
           if (cls !== "UpdateDeleteMessages" && cls !== "UpdateDeleteChannelMessages") return;
           const messageIds: number[] = (update.messages ?? []).map((x: any) => Number(x));
-          // Channel вариант несёт channelId, иначе — это PM, нужно пройтись по кэшу.
+          // Channel 情况携带 channelId，否则是私聊，需要遍历缓存。
           if (cls === "UpdateDeleteChannelMessages") {
             const chId = -Number(update.channelId?.value ?? update.channelId);
             for (const mid of messageIds) {
@@ -201,7 +225,7 @@ export function makeUserbotAdapter(cfg: ProfileConfig): TgAdapter {
             }
             return;
           }
-          // PM-вариант: неизвестно от какого юзера — ищем по id в кэше по всем пирам.
+          // 私聊情况：不知道来自哪个用户 — 按 id 在所有 peer 的缓存中搜索。
           for (const mid of messageIds) {
             for (const [k, v] of incomingCache.entries()) {
               if (!k.endsWith(`:${mid}`)) continue;
@@ -225,7 +249,7 @@ export function makeUserbotAdapter(cfg: ProfileConfig): TgAdapter {
         } catch { /* keep update loop alive */ }
       }, new Raw({}));
 
-      // === Task #16: эмодзи-реакции юзера на её сообщения. UpdateMessageReactions приходит всем участникам. ===
+      // === Task #16: 用户对她消息的 emoji 反应。UpdateMessageReactions 会发送给所有参与者。 ===
       client.addEventHandler(async (update: any) => {
         try {
           const cls = update?.className ?? update?.constructor?.name ?? "";
@@ -238,7 +262,7 @@ export function makeUserbotAdapter(cfg: ProfileConfig): TgAdapter {
           if (!chatId) return;
           const messageId = Number(update.msgId);
           const reactions = (update.reactions?.recentReactions ?? []) as any[];
-          // Берём последнюю реакцию от партнёра (не от самой девушки).
+          // 取对方（非女孩本人）的最后一条反应。
           const lastFromOther = reactions
             .filter((r: any) => Number(r.peerId?.userId?.value ?? r.peerId?.userId ?? 0) !== Number((me?.id as any)?.value ?? me?.id ?? 0))
             .pop();
@@ -260,6 +284,22 @@ export function makeUserbotAdapter(cfg: ProfileConfig): TgAdapter {
           }).catch(() => {});
         } catch { /* keep update loop alive */ }
       }, new Raw({}));
+
+      // 连接心跳：每 60s ping 一次，防止代理空闲断开，同时监控连接健康度
+      const heartbeat = setInterval(async () => {
+        try {
+          await withTimeout(
+            client.invoke(new Api.Ping({ pingId: BigInt(Date.now()) })),
+            10_000,
+            "heartbeat"
+          );
+        } catch {
+          debug("[userbot] heartbeat failed, will rely on autoReconnect");
+        }
+      }, 60_000);
+
+      // 记录 heartbeat 引用以便 stop 时清理
+      (client as any).__heartbeatId = heartbeat;
     },
     async sendText(chatId, text) {
       const peer = await resolvePeer(chatId);
@@ -301,12 +341,12 @@ export function makeUserbotAdapter(cfg: ProfileConfig): TgAdapter {
       } catch { /* too old / deleted / no perms */ }
     },
     async updateOnlineStatus(online) {
-      // Issue #81 — выставляем статус «в сети» / «не в сети».
-      // Telegram держит online ~60с от последнего UpdateStatus({offline:false}),
-      // поэтому heartbeat должен периодически освежать состояние.
+      // Issue #81 — 设置「在线」/「离线」状态。
+      // Telegram 在最后一次 UpdateStatus({offline:false}) 后保持 online 约 60 秒，
+      // 因此 heartbeat 需要定期刷新状态。
       try {
         await client.invoke(new Api.account.UpdateStatus({ offline: !online }));
-      } catch { /* swallow — может быть отключение, флуд-лимит и т.п. */ }
+      } catch { /* 忽略 — 可能是断开连接、频率限制等 */ }
     },
     async blockContact(chatId) {
       const peer = await resolvePeer(chatId);
@@ -339,9 +379,20 @@ export function makeUserbotAdapter(cfg: ProfileConfig): TgAdapter {
       };
     },
     async stop() {
+      const hb = (client as any).__heartbeatId;
+      if (hb) { clearInterval(hb); }
       await client.disconnect();
+      if (tunnelClose) { await tunnelClose(); tunnelClose = undefined; }
     }
   };
+}
+
+/** 将 TelegramProxyConfig 转为 gramjs ProxyInterface。 */
+function buildLoginProxy(cfg: TelegramProxyConfig): ProxyInterface {
+  if (cfg.MTProxy && cfg.secret) {
+    return { ip: cfg.ip, port: cfg.port, MTProxy: true, secret: cfg.secret, timeout: cfg.timeout ?? 10 };
+  }
+  return { ip: cfg.ip, port: cfg.port, socksType: cfg.socksType ?? 5, username: cfg.username, password: cfg.password, timeout: cfg.timeout ?? 10 };
 }
 
 /** Helper for wizard: log in interactively and return session string. */
@@ -351,10 +402,13 @@ export async function userbotLogin(opts: {
   phone: string;
   promptCode: () => Promise<string>;
   promptPassword: () => Promise<string>;
+  proxy?: TelegramProxyConfig;
 }): Promise<string> {
+  const hasProxy = !!opts.proxy;
   const client = new TelegramClient(new StringSession(""), opts.apiId, opts.apiHash, {
     connectionRetries: 5,
-    useWSS: true
+    useWSS: !hasProxy, // SOCKS/MTProxy 与 WSS 互斥
+    proxy: hasProxy ? buildLoginProxy(opts.proxy!) : undefined
   });
   await client.start({
     phoneNumber: async () => opts.phone,

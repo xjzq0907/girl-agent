@@ -80,7 +80,7 @@ export const useStore = create<State>((set, get) => ({
         set({ showSetup: true, tab: "logs" });
       }
     } catch (e) {
-      get().toast(`Не удалось загрузить профили: ${(e as Error)?.message}`, "error");
+      get().toast(`加载配置文件失败: ${(e as Error)?.message}`, "error");
       set({ ready: true });
     }
   },
@@ -98,7 +98,7 @@ export const useStore = create<State>((set, get) => ({
       const data = await api.getProfile(slug);
       set({ activeSlug: slug, activeConfig: data.config, draft: null });
     } catch (e) {
-      get().toast(`Не удалось загрузить профиль: ${(e as Error)?.message}`, "error");
+      get().toast(`加载配置文件失败: ${(e as Error)?.message}`, "error");
     }
   },
 
@@ -124,15 +124,15 @@ export const useStore = create<State>((set, get) => ({
     try {
       const updated = await api.updateProfile(activeSlug, draft);
       set({ activeConfig: updated.config });
-      get().toast("Конфиг сохранён", "success");
+      get().toast("配置已保存", "success");
       // restart runtime
       await api.applyProfile(activeSlug);
       await get().refreshProfiles();
       const fresh = await api.getProfile(activeSlug);
       set({ activeConfig: fresh.config, draft: null });
-      get().toast("Рантайм перезапущен", "success");
+      get().toast("运行时已重启", "success");
     } catch (e) {
-      get().toast(`Ошибка применения: ${(e as Error)?.message}`, "error");
+      get().toast(`应用错误: ${(e as Error)?.message}`, "error");
     }
   },
 
@@ -161,9 +161,9 @@ export const useStore = create<State>((set, get) => ({
     set({ commandModal: { command, loading: true } });
     try {
       const r = await api.sendCommand(slug, command, args);
-      set({ commandModal: { command, text: r.text || `${command} выполнено`, loading: false } });
+      set({ commandModal: { command, text: r.text || `${command} 已执行`, loading: false } });
     } catch (e) {
-      set({ commandModal: { command, error: (e as Error)?.message ?? "Неизвестная ошибка", loading: false } });
+      set({ commandModal: { command, error: (e as Error)?.message ?? "未知错误", loading: false } });
     }
   },
 

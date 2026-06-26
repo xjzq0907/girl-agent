@@ -3,13 +3,13 @@ import { api } from "../lib/api";
 import { useState } from "react";
 
 const TAB_TITLES: Record<string, string> = {
-  assistant: "AI-помощник",
-  logs: "Логи и статус",
-  relationship: "Отношения",
-  configuration: "Конфигурация",
-  memory: "Память",
-  addons: "Аддоны",
-  diagnostics: "Диагностика"
+  assistant: "AI 助手",
+  logs: "日志和状态",
+  relationship: "关系",
+  configuration: "配置",
+  memory: "记忆",
+  addons: "插件",
+  diagnostics: "诊断"
 };
 
 export function Topbar() {
@@ -37,9 +37,9 @@ export function Topbar() {
       if (action === "resume") await api.resumeProfile(activeSlug);
       await refreshProfiles();
       await refreshActive();
-      toast(`Команда ${action} выполнена`, "success");
+      toast(`命令 ${action} 已执行`, "success");
     } catch (e) {
-      toast(`${action} не удалось: ${(e as Error)?.message}`, "error");
+      toast(`${action} 失败: ${(e as Error)?.message}`, "error");
     } finally {
       setBusy(false);
     }
@@ -55,7 +55,7 @@ export function Topbar() {
           toggleSidebar();
         }}
         onClick={toggleSidebar}
-        aria-label="меню"
+        aria-label="菜单"
       >≡</button>
       <div>
         <div className="title">{TAB_TITLES[tab] ?? "girl-agent"}</div>
@@ -65,19 +65,19 @@ export function Topbar() {
         {active && (
           <>
             {active.status === "stopped" && (
-              <button className="btn primary tiny" disabled={busy} onClick={() => startStop("start")}>▶ Запустить</button>
+              <button className="btn primary tiny" disabled={busy} onClick={() => startStop("start")}>▶ 启动</button>
             )}
             {active.status === "running" && (
               <>
-                <button className="btn tiny" disabled={busy} onClick={() => startStop("pause")}>‖ Пауза</button>
-                <button className="btn tiny" disabled={busy} onClick={() => startStop("stop")}>■ Стоп</button>
+                <button className="btn tiny" disabled={busy} onClick={() => startStop("pause")}>‖ 暂停</button>
+                <button className="btn tiny" disabled={busy} onClick={() => startStop("stop")}>■ 停止</button>
               </>
             )}
             {active.status === "paused" && (
-              <button className="btn primary tiny" disabled={busy} onClick={() => startStop("resume")}>▶ Возобновить</button>
+              <button className="btn primary tiny" disabled={busy} onClick={() => startStop("resume")}>▶ 恢复</button>
             )}
             {active.status === "error" && (
-              <button className="btn primary tiny" disabled={busy} onClick={() => startStop("start")}>↻ Перезапуск</button>
+              <button className="btn primary tiny" disabled={busy} onClick={() => startStop("start")}>↻ 重启</button>
             )}
           </>
         )}

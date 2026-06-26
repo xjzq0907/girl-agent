@@ -38,7 +38,7 @@ export async function runOAuthFlow(log: (msg: string) => void): Promise<OAuthTok
   });
 
   const url = `${AUTHORIZE_URL}?${authorizeParams}`;
-  log(`открываю браузер для авторизации: ${url}`);
+  log(`正在打开浏览器进行授权: ${url}`);
   openBrowser(url);
 
   let code: string;
@@ -48,7 +48,7 @@ export async function runOAuthFlow(log: (msg: string) => void): Promise<OAuthTok
     close();
   }
 
-  log("код получен, обмениваю на токен...");
+  log("已获取授权码，正在兑换令牌...");
   return exchangeCode(code, REDIRECT_URI);
 }
 
@@ -174,7 +174,7 @@ function startCallbackServer(expectedState: string): Promise<{
 
       if (error) {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-        res.end("<h2>Авторизация отклонена</h2><p>Можешь закрыть эту вкладку.</p>");
+        res.end("<h2>授权已拒绝</h2><p>你可以关闭此标签页。</p>");
         clearTimeout(timeout);
         rejectCode(new Error(`OAuth denied: ${error}`));
         return;
@@ -182,12 +182,12 @@ function startCallbackServer(expectedState: string): Promise<{
 
       if (!code || state !== expectedState) {
         res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" });
-        res.end("<h2>Ошибка</h2><p>Неверный state или отсутствует code.</p>");
+        res.end("<h2>错误</h2><p>无效的 state 或缺少 code。</p>");
         return;
       }
 
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      res.end("<h2>Авторизация успешна!</h2><p>Можешь закрыть эту вкладку и вернуться в терминал.</p>");
+      res.end("<h2>授权成功！</h2><p>你可以关闭此标签页，返回终端。</p>");
       clearTimeout(timeout);
       resolveCode(code);
     });
@@ -206,11 +206,11 @@ function openBrowser(url: string): void {
   const cmd =
     platform === "darwin" ? `open "${url}"` :
     platform === "win32" ? `start "" "${url}"` :
-    `xdg-open "${url}" 2>/dev/null || sensible-browser "${url}" 2>/dev/null || echo "открой вручную: ${url}"`;
+    `xdg-open "${url}" 2>/dev/null || sensible-browser "${url}" 2>/dev/null || echo "请手动打开: ${url}"`;
 
   exec(cmd, (err) => {
     if (err) {
-      process.stderr.write(`[girlai-oauth] не удалось открыть браузер, открой вручную:\n  ${url}\n`);
+      process.stderr.write(`[girlai-oauth] 无法打开浏览器，请手动打开:\n  ${url}\n`);
     }
   });
 }

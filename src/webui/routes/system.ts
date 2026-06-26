@@ -9,7 +9,7 @@ let cachedVersion: string | null = null;
 
 async function readPackageVersion(): Promise<string> {
   if (cachedVersion) return cachedVersion;
-  // Поиск package.json относительно текущего файла. dist/cli.js → ../package.json
+  // 相对于当前文件查找 package.json。dist/cli.js → ../package.json
   const candidates: string[] = [];
   try {
     const here = fileURLToPath(import.meta.url);
@@ -64,7 +64,7 @@ export function registerSystemRoutes(r: Router): void {
     if (!data || data.dryRun !== false) {
       return {
         ok: false,
-        message: "обновление через WebUI пока недоступно. Запустите вручную: npm i -g @thesashadev/girl-agent или docker pull ghcr.io/thesashadev/girl-agent:latest"
+        message: "通过 WebUI 更新暂不可用。请手动运行: npm i -g @thesashadev/girl-agent 或 docker pull ghcr.io/thesashadev/girl-agent:latest"
       };
     }
     throw new HttpError(501, "in-place update not implemented");

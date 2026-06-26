@@ -19,5 +19,5 @@ export { recordInteractionMemory };
 export async function maybeAdvanceRelationshipTimeline(cfg: ProfileConfig, previousStage: string, nextStage: string): Promise<void> {
   if (previousStage === nextStage) return;
   await migrateExistingMemoryToPalace(cfg);
-  await appendMd(cfg.slug, "relationship/timeline.md", `- ${new Date().toISOString()}: стадия изменилась ${previousStage} → ${nextStage}\n`);
+  await appendMd(cfg.slug, "relationship/timeline.md", `- ${new Date().toISOString()}: 阶段从 ${previousStage} 变为 ${nextStage}\n`);
 }

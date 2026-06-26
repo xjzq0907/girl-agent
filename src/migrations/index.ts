@@ -1,11 +1,11 @@
 /**
- * Система миграций данных.
+ * 数据迁移系统。
  *
- * Каждая миграция — объект с id (семантическая версия), description и функцией migrate().
- * migrate() получает путь к профилю и config, может модифицировать файлы на диске.
+ * 每个迁移都是一个包含 id（语义化版本）、description 和 migrate() 函数的对象。
+ * migrate() 接收配置文件路径和 config，可以修改磁盘上的文件。
  *
- * Миграции выполняются в порядке возрастания id. Уже применённые миграции
- * пропускаются (трекаются через .migrations.json в DATA_ROOT).
+ * 迁移按 id 升序执行。已应用的迁移会被跳过
+ * （通过 DATA_ROOT 中的 .migrations.json 跟踪）。
  */
 
 import { promises as fs } from "node:fs";
@@ -59,7 +59,7 @@ async function writeMigrationState(state: MigrationState): Promise<void> {
   await fs.writeFile(MIGRATIONS_FILE(), JSON.stringify(state, null, 2), "utf8");
 }
 
-// --- Реестр миграций (добавлять новые сюда в порядке возрастания) ---
+// --- 迁移注册表（按升序在此处添加新的迁移） ---
 import { migration0112 } from "./0112-add-use-wss-default.js";
 import { migration0113 } from "./0113-ensure-communication-md.js";
 import { migration0114 } from "./0114-memory-palace.js";
@@ -71,7 +71,7 @@ export const ALL_MIGRATIONS: Migration[] = [
 ];
 
 /**
- * Возвращает список миграций, которые ещё не были применены.
+ * 返回尚未应用的迁移列表。
  */
 export async function pendingMigrations(): Promise<Migration[]> {
   const state = await readMigrationState();
@@ -92,7 +92,7 @@ export interface UpdateResult {
 }
 
 /**
- * Запуск всех pending-миграций по всем профилям.
+ * 对所有配置文件运行所有待定迁移。
  */
 export async function runMigrations(opts?: {
   verbose?: boolean;
@@ -102,7 +102,7 @@ export async function runMigrations(opts?: {
   const log = opts?.verbose ? (msg: string) => process.stderr.write(msg + "\n") : () => {};
 
   if (pending.length === 0) {
-    log("все миграции уже применены, данные актуальны.");
+    log("所有迁移已应用，数据是最新的。");
     return { profilesUpdated: 0, migrationsApplied: [], warnings: [], errors: [] };
   }
 
@@ -117,7 +117,7 @@ export async function runMigrations(opts?: {
     for (const slug of profiles) {
       const cfg = await readConfig(slug);
       if (!cfg) {
-        log(`  пропуск ${slug}: не удалось прочитать config.json`);
+        log(`  跳过 ${slug}：无法读取 config.json`);
         continue;
       }
 
@@ -132,7 +132,7 @@ export async function runMigrations(opts?: {
             description: migration.description,
             missingInputs: missing
           });
-          log(`  ⚠ ${slug}: требуется ввод: ${missing.map(f => f.label).join(", ")}`);
+          log(`  ⚠ ${slug}：需要输入：${missing.map(f => f.label).join(", ")}`);
         }
       }
 
@@ -141,7 +141,7 @@ export async function runMigrations(opts?: {
         try {
           llm = opts.llmFactory(cfg);
         } catch (e) {
-          log(`  ${slug}: не удалось создать LLM: ${(e as Error).message}`);
+          log(`  ${slug}：无法创建 LLM：${(e as Error).message}`);
         }
       }
 
@@ -154,10 +154,10 @@ export async function runMigrations(opts?: {
         });
         await writeConfig(updated);
         profilesAffected++;
-        log(`  ${slug}: ок`);
+        log(`  ${slug}：成功`);
       } catch (e) {
         const errMsg = e instanceof Error ? e.message : String(e);
-        log(`  ${slug}: ошибка — ${errMsg}`);
+        log(`  ${slug}：错误 — ${errMsg}`);
         result.errors.push({ profile: slug, migration: migration.id, error: errMsg });
       }
     }
@@ -165,7 +165,7 @@ export async function runMigrations(opts?: {
     state.appliedMigrations.push(migration.id);
     result.migrationsApplied.push(migration.id);
     result.profilesUpdated = Math.max(result.profilesUpdated, profilesAffected);
-    log(`  применено к ${profilesAffected} профилям`);
+    log(`  已应用于 ${profilesAffected} 个配置文件`);
   }
 
   state.lastRunVersion = currentVersion();
@@ -176,7 +176,7 @@ export async function runMigrations(opts?: {
 }
 
 /**
- * Проверяет, есть ли pending-миграции. Можно вызывать при старте runtime.
+ * 检查是否有待定迁移。可在运行环境启动时调用。
  */
 export async function checkForPendingMigrations(): Promise<boolean> {
   const pending = await pendingMigrations();
@@ -185,11 +185,11 @@ export async function checkForPendingMigrations(): Promise<boolean> {
 
 export function formatUpdateWarnings(warnings: MigrationWarning[]): string {
   if (!warnings.length) return "";
-  const lines = ["[updater] ⚠ для завершения обновления необходимо:"];
+  const lines = ["[updater] ⚠ 完成更新需要："];
   for (const w of warnings) {
     for (const field of w.missingInputs) {
-      const secret = field.secret ? " (секрет)" : "";
-      lines.push(`  • ${field.label}${secret} — требуется для: ${w.description}`);
+      const secret = field.secret ? "（密钥）" : "";
+      lines.push(`  • ${field.label}${secret} — 需要用于：${w.description}`);
     }
   }
   return lines.join("\n");

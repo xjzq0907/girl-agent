@@ -4,11 +4,11 @@ import { api, statusSocket } from "../lib/api";
 import { renderMarkdown } from "../lib/markdown";
 
 const SCORES: { key: string; label: string; negative?: boolean }[] = [
-  { key: "interest", label: "Интерес" },
-  { key: "trust", label: "Доверие" },
-  { key: "attraction", label: "Влечение" },
-  { key: "annoyance", label: "Раздражение", negative: true },
-  { key: "cringe", label: "Кринж", negative: true }
+  { key: "interest", label: "兴趣" },
+  { key: "trust", label: "信任" },
+  { key: "attraction", label: "吸引" },
+  { key: "annoyance", label: "恼怒", negative: true },
+  { key: "cringe", label: "尴尬", negative: true }
 ];
 
 interface ScorePoint { t: number; values: Record<string, number> }
@@ -41,28 +41,28 @@ export function RelationshipPage() {
   }, [cfg?.slug]);
 
   if (!cfg) {
-    return <div className="empty"><div className="em-icon">♥</div><div className="em-title">Профиль не выбран</div><button className="btn primary" onClick={() => showSetupFlow(true)}>Создать</button></div>;
+    return <div className="empty"><div className="em-icon">♥</div><div className="em-title">未选择个人资料</div><button className="btn primary" onClick={() => showSetupFlow(true)}>创建</button></div>;
   }
 
   return (
     <div className="grid" style={{ gap: 16, maxWidth: 920 }}>
       <div className="card">
         <div className="card-header">
-          <div className="h-title">Стадия отношений</div>
+          <div className="h-title">关系阶段</div>
           <div className="h-meta">
             {stage ? <span className="chip accent">{stage.num}. {stage.label}</span> : "—"}
           </div>
           <div className="h-actions">
             <button className="btn tiny" onClick={() => sendCmd("status", toast, cfg.slug)}>:status</button>
             <button className="btn tiny" onClick={() => sendCmd("why", toast, cfg.slug)}>:why</button>
-            <button className="btn tiny danger" onClick={() => { if (confirm("Сбросить relationship?")) sendCmd("reset", toast, cfg.slug); }}>:reset</button>
+            <button className="btn tiny danger" onClick={() => { if (confirm("重置 relationship?")) sendCmd("reset", toast, cfg.slug); }}>:reset</button>
           </div>
         </div>
       </div>
 
       <div className="card">
         <div className="card-header">
-          <div className="h-title">Текущие шкалы</div>
+          <div className="h-title">当前数值</div>
         </div>
         {score && (
           <div className="score-grid">
@@ -79,19 +79,19 @@ export function RelationshipPage() {
 
       <div className="card">
         <div className="card-header">
-          <div className="h-title">История за сессию</div>
-          <div className="h-meta">снимки за {history.length} тиков</div>
+          <div className="h-title">会话历史</div>
+          <div className="h-meta">{history.length} 个刻度的快照</div>
         </div>
         <Sparklines data={history} />
-        {history.length === 0 && <div className="hint" style={{ marginTop: 8 }}>Запусти runtime — он будет присылать снапшоты по WebSocket каждые 5 секунд.</div>}
+        {history.length === 0 && <div className="hint" style={{ marginTop: 8 }}>启动运行时 — 它将每 5 秒通过 WebSocket 发送快照。</div>}
       </div>
 
       <div className="card">
         <div className="card-header">
           <div className="h-title">relationship.md</div>
-          <div className="h-meta">заметки и история (Markdown)</div>
+          <div className="h-meta">笔记和历史 (Markdown)</div>
         </div>
-        <div className="md-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(notes) || "<p style='color:var(--ga-text-faint)'>(пусто)</p>" }} />
+        <div className="md-preview" dangerouslySetInnerHTML={{ __html: renderMarkdown(notes) || "<p style='color:var(--ga-text-faint)'>(空白)</p>" }} />
       </div>
     </div>
   );

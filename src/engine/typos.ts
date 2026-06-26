@@ -1,60 +1,58 @@
 /**
- * Реалистичные опечатки с учётом раскладки клавиатуры.
+ * 基于键盘布局的真实拼写错误模拟。
  *
- * Логика:
- *  - Опечатки только такие, какие реально делают люди:
- *    - соседний клавиш (fat-finger): "привет" → "приветт" / "пиривет" / "припет"
- *    - пропуск буквы: "сейчас" → "сейчс"
- *    - дублирование буквы: "когда" → "когдда"
- *    - перестановка соседних букв: "потом" → "пооом" → нет, "потмо"
- *    - случайный английский символ если буква рядом на латинской клавиатуре
- *      (раскладку забыла переключить) — этого делаем редко
- *  - Учитываем РУССКИЕ И АНГЛИЙСКИЕ раскладки QWERTY (ЙЦУКЕН / QWERTY)
- *  - Опечатки делаются на КЛИЕНТЕ (т.е. вставляются в финальный текст), не на
- *    уровне LLM — так контролируем плотность.
- *  - Шанс опечатки на одно слово настраивается через `intensity` (0..1).
- *  - НЕ ломаем смайлы, пунктуацию, ссылки.
+ * 逻辑：
+ *  - 只模拟人们实际会犯的拼写错误：
+ *    - 相邻按键（胖手指/fat-finger）：拼音错误，如 "nihao" → "nijao" 或 "nihso"
+ *    - 漏打字母：拼音中漏掉字母，如 "xianzai" → "xanzi"
+ *    - 重复字母：如 "shenme" → "shenmme"
+ *    - 相邻字母交换：如 "pengyou" → "pnegyou"
+ *    - 忘记切换输入法导致的英文/拼音混入（偶尔出现）
+ *  - 支持中文拼音输入（Pinyin）和英文 QWERTY 键盘布局
+ *  - 拼写错误在客户端（即最终文本中插入），不在 LLM 层面处理——这样便于控制密度。
+ *  - 每个单词的拼写错误概率通过 `intensity`（0..1）参数调节。
+ *  - 不会破坏表情符号、标点符号和链接。
  */
 
-// Соседние клавиши на ЙЦУКЕН (русская раскладка).
-// Каждый ключ — буква в нижнем регистре, значение — список физически
-// соседних клавиш (включая ↑/↓ ряды). Только частые буквы.
+// 拼音输入时的相邻按键（QWERTY 键盘布局）。
+// 每个键为小写字母，对应的值是物理相邻的按键列表
+// （包括上下排）。仅包含常用字母。
 const RU_NEIGHBORS: Record<string, string> = {
-  "й": "цфыв",
-  "ц": "уйфыв",
-  "у": "кцыва",
-  "к": "еувапр",
-  "е": "нкавпр",
-  "н": "гепро",
-  "г": "шнпрол",
-  "ш": "щгролд",
-  "щ": "зшолдж",
-  "з": "хщлджэ",
-  "х": "ъзджэ",
-  "ъ": "хжэ",
-  "ф": "йцыяч",
-  "ы": "йцувфяч",
-  "в": "уакпысм",
-  "а": "квперсми",
-  "п": "анерот",
-  "р": "пнгомь",
-  "о": "ргшльб",
-  "л": "ошщдьбю",
-  "д": "лщзжбю",
-  "ж": "дзхэю",
-  "э": "жхъ",
-  "я": "фыч",
-  "ч": "ыясм",
-  "с": "ачмви",
-  "м": "вситб",
-  "и": "пасмть",
-  "т": "пирьб",
-  "ь": "ротлбю",
-  "б": "лоьюм",
-  "ю": "длбь"
+  "q": "wasd",
+  "w": "eqasd",
+  "e": "rwsdf",
+  "r": "tedfgh",
+  "t": "yrdfgh",
+  "y": "uthj",
+  "u": "iyghjk",
+  "i": "ouhjkl",
+  "o": "pijk;l",
+  "p": "[okl;'",
+  "[": "]pl;'",
+  "]": "[;'",
+  "a": "qwsxz",
+  "s": "qweadzx",
+  "d": "erfghc",
+  "f": "rdtghcvb",
+  "g": "fythj",
+  "h": "gyujnm",
+  "j": "huikm,",
+  "k": "jio,lm,.",
+  "l": "kop;,.m",
+  ";": "lp['.]",
+  "'": ";[]",
+  "z": "asx",
+  "x": "szcv",
+  "c": "fxvdb",
+  "v": "dcbn,",
+  "b": "gfhvnm",
+  "n": "gbh,m",
+  "m": "hjnk,.",
+  ",": "kj.mv",
+  ".": "lk,m"
 };
 
-// Соседние клавиши на QWERTY (английская раскладка).
+// QWERTY 键盘上的相邻按键（英文 / 拼音输入布局）。
 const EN_NEIGHBORS: Record<string, string> = {
   "q": "wa", "w": "qears", "e": "wrsd", "r": "etdf", "t": "ryfg",
   "y": "tugh", "u": "yihj", "i": "uojk", "o": "ipkl", "p": "ol",
@@ -64,15 +62,15 @@ const EN_NEIGHBORS: Record<string, string> = {
   "n": "bhjm", "m": "njk"
 };
 
-// Соответствие физически той же клавиши: ЙЦУКЕН <-> QWERTY.
-// Используется для "забытой раскладки" опечаток.
+// 中/英文输入法下的字符映射。
+// 用于模拟"忘记切换输入法"导致的拼写错误。
 const RU_TO_EN: Record<string, string> = {
-  "й": "q", "ц": "w", "у": "e", "к": "r", "е": "t", "н": "y", "г": "u",
-  "ш": "i", "щ": "o", "з": "p", "х": "[", "ъ": "]",
-  "ф": "a", "ы": "s", "в": "d", "а": "f", "п": "g", "р": "h", "о": "j",
-  "л": "k", "д": "l", "ж": ";", "э": "'",
-  "я": "z", "ч": "x", "с": "c", "м": "v", "и": "b", "т": "n", "ь": "m",
-  "б": ",", "ю": "."
+  "q": "q", "w": "w", "e": "e", "r": "r", "t": "t", "y": "y", "u": "u",
+  "i": "i", "o": "o", "p": "p", "[": "[", "]": "]",
+  "a": "a", "s": "s", "d": "d", "f": "f", "g": "g", "h": "h", "j": "j",
+  "k": "k", "l": "l", ";": ";", "'": "'",
+  "z": "z", "x": "x", "c": "c", "v": "v", "b": "b", "n": "n", "m": "m",
+  ",": ",", ".": "."
 };
 
 const EN_TO_RU: Record<string, string> = Object.fromEntries(
@@ -90,7 +88,7 @@ function preserveCase(src: string, target: string): string {
   return src === src.toUpperCase() ? target.toUpperCase() : target;
 }
 
-// Базовые операции.
+// 基础操作。
 function swapAdjacent(word: string, i: number): string {
   if (i < 0 || i >= word.length - 1) return word;
   return word.slice(0, i) + word[i + 1] + word[i] + word.slice(i + 2);
@@ -114,8 +112,8 @@ function replaceWithNeighbor(word: string, i: number): string {
   return word.slice(0, i) + preserveCase(ch, repl) + word.slice(i + 1);
 }
 
-// Опечатка "не та раскладка" — заменяем одну букву на соответствующий
-// латинский/кириллический символ той же клавиши.
+// 输入法切换错误 —— 将字符替换为"忘记切换布局"时对应的
+// 拉丁/非拉丁字符。
 function wrongLayout(word: string, i: number): string {
   if (i < 0 || i >= word.length) return word;
   const ch = word[i]!;
@@ -126,9 +124,9 @@ function wrongLayout(word: string, i: number): string {
 }
 
 export interface TypoOptions {
-  /** Общий уровень опечаток, 0..1. По умолчанию 0.06 (примерно 1 опечатка на 16 слов). */
+  /** 整体拼写错误概率，0..1。默认 0.06（约每16个词出现一次错误）。 */
   intensity?: number;
-  /** Сколько максимум опечаток ставить на одно слово. По умолчанию 1. */
+  /** 每个词最多出现的错误数。默认 1。 */
   maxPerWord?: number;
 }
 
@@ -151,15 +149,15 @@ function corruptWord(word: string, opts: Required<TypoOptions>): string {
   return result;
 }
 
-const WORD_RE = /([A-Za-zА-Яа-яЁёІіЇїЄєҐґ]+)/g;
+const WORD_RE = /([A-Za-z\u4e00-\u9fff]+)/g;
 
 /**
- * Добавляет реалистичные опечатки к тексту.
+ * 为文本添加真实的拼写错误。
  *
- * - Не трогает URL, числа, эмодзи, пунктуацию.
- * - Слова короче 3 символов не портит (плохо выглядит).
- * - Не делает опечатку в каждом слове — только статистически intensity слов
- *   получают опечатку.
+ * - 不会影响 URL、数字、表情符号和标点符号。
+ * - 短于 3 个字符的单词不会被破坏（效果不好）。
+ * - 并非每个单词都会有错误——只有统计上 intensity 比例的单词
+ *   会出现拼写错误。
  */
 export function injectTypos(text: string, opts: TypoOptions = {}): string {
   const merged: Required<TypoOptions> = {
@@ -167,30 +165,30 @@ export function injectTypos(text: string, opts: TypoOptions = {}): string {
     maxPerWord: opts.maxPerWord ?? 1
   };
   if (merged.intensity <= 0) return text;
-  // Не трогаем строки с URL'ами в них (просто пропускаем целиком).
+  // 不处理包含 URL 的字符串（直接跳过整行）。
   if (/(?:https?:\/\/|www\.|t\.me\/|@\w+)/i.test(text)) return text;
   return text.replace(WORD_RE, (word) => {
-    // Каждое слово с вероятностью intensity * 4 получает попытку опечатки.
-    // (внутри corruptWord плотность контролируется тоже).
+    // 每个词以 intensity * 4 的概率获得一次拼写错误尝试。
+    // （corruptWord 内部也会控制密度）。
     if (Math.random() > merged.intensity * 4) return word;
     return corruptWord(word, merged);
   });
 }
 
 /**
- * Решает, ставить ли опечатки в этой реплике вообще.
+ * 决定是否在此条回复中添加拼写错误。
  *
- * Решение зависит от vibe/communication: "warm" — реже опечаток,
- * "short"/"bursty" — чаще. Возвращает intensity (0 = не ставить).
+ * 决策依赖于 vibe/communication 风格："warm"——错误更少，
+ * "short"/"bursty"——错误更多。返回 intensity（0 = 不添加错误）。
  */
 export function pickTypoIntensity(opts: { messageStyle?: string; vibe?: string; bubbles?: number }): number {
-  // Базово редко.
+  // 基础频率较低。
   let base = 0.04;
   if (opts.messageStyle === "bursty" || opts.vibe === "short") base = 0.08;
   if (opts.messageStyle === "longform" || opts.vibe === "warm") base = 0.025;
-  // Если много пузырей — допустимо чуть больше опечаток.
+  // 气泡较多时允许稍微多一点错误。
   if ((opts.bubbles ?? 1) >= 3) base += 0.02;
-  // Каждую отдельную реплику бросаем кубик: 60% реплик вообще без опечаток.
+  // 每条回复单独掷骰子：60% 的回复完全不出错。
   if (Math.random() < 0.6) return 0;
   return base;
 }

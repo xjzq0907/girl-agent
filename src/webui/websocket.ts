@@ -5,9 +5,9 @@ import { readRelationship } from "../storage/md.js";
 import { isAuthorized } from "./auth.js";
 
 /**
- * WS-эндпоинты согласно §6.2 ТЗ.
- *  /ws/logs/:slug    — стрим событий runtime'а в реальном времени.
- *  /ws/status/:slug  — стрим статусных снапшотов (score, stage, online/offline).
+ * WS 端点，参见技术规范 §6.2。
+ *  /ws/logs/:slug    — 实时推送运行时事件流。
+ *  /ws/status/:slug  — 推送状态快照 (分数、阶段、在线/离线)。
  */
 export function attachWebSockets(server: http.Server): void {
   const wssLogs = new WebSocketServer({ noServer: true });

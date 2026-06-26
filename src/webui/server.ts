@@ -19,9 +19,9 @@ import { listProfiles, readConfig } from "../storage/md.js";
 export interface WebUIServerOptions {
   port?: number;
   host?: string;
-  /** автостартовать профиль при подключении первого WebUI клиента, если он один */
+  /** 当第一个 WebUI 客户端连接时，如果只有一个配置文件，则自动启动 */
   autoStart?: boolean;
-  /** не открывать браузер */
+  /** 不打开浏览器 */
   noBrowser?: boolean;
 }
 

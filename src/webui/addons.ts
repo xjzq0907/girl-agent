@@ -7,17 +7,17 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 
 /**
- * Аддоны girl-agent (.gaa формат).
+ * 插件 (Addon) (.gaa 格式)。
  *
- * .gaa файл — zip-архив с содержимым папки аддона.
+ * .gaa 文件是一个包含插件文件夹内容的 zip 压缩包。
  *
- * Структура папки аддона:
- *   manifest.json      — метаданные (обязательно)
- *   files/             — файлы для копирования в data/<slug>/ (persona.md, speech.md и т.д.)
- *   config.patch.json  — JSON-объект с полями config'а профиля для мёрджа
- *   theme.css          — CSS-стили для WebUI (для theme-аддонов)
- *   install.sh         — скрипт пост-установки (опционально)
- *   README.md          — документация (опционально)
+ * 插件文件夹结构：
+ *   manifest.json      — 元数据（必需）
+ *   files/             — 要复制到 data/<slug>/ 的文件 (persona.md, speech.md 等)
+ *   config.patch.json  — 配置文件的 JSON 对象，用于合并
+ *   theme.css          — WebUI 的 CSS 样式（用于主题插件）
+ *   install.sh         — 安装后脚本（可选）
+ *   README.md          — 文档（可选）
  */
 
 export interface AddonManifest {
@@ -26,32 +26,32 @@ export interface AddonManifest {
   description: string;
   version: string;
   author?: string;
-  /** semver range girl-agent совместимости */
+  /** girl-agent 兼容性 semver 范围 */
   compatibility?: string;
   tags?: string[];
-  /** id'ы других аддонов (зависимости) */
+  /** 其他插件的 ID（依赖） */
   dependencies?: string[];
-  /** настройки аддона — пользователь заполняет при установке/позже */
+  /** 插件设置 — 用户在安装时/之后填写 */
   settings?: AddonSetting[];
-  /** превью / иконка (URL или относительный путь) */
+  /** 预览 / 图标（URL 或相对路径） */
   icon?: string;
   homepage?: string;
 }
 
 export interface AddonSetting {
-  /** уникальный ключ настройки (латиница, без пробелов) */
+  /** 设置唯一键（拉丁字母，无空格） */
   key: string;
-  /** отображаемое название */
+  /** 显示名称 */
   label: string;
-  /** описание / подсказка */
+  /** 描述 / 提示 */
   hint?: string;
-  /** тип поля */
+  /** 字段类型 */
   type: "string" | "number" | "boolean" | "select";
-  /** значение по умолчанию */
+  /** 默认值 */
   default?: string | number | boolean;
-  /** варианты для type=select */
+  /** type=select 的选项 */
   options?: { value: string; label: string }[];
-  /** обязательное ли поле */
+  /** 是否必填 */
   required?: boolean;
 }
 
@@ -60,9 +60,9 @@ export interface InstalledAddon {
   enabled: boolean;
   installedAt: string;
   source: "registry" | "file" | "local";
-  /** пользовательские значения настроек */
+  /** 用户设置值 */
   settingsValues?: Record<string, string | number | boolean>;
-  /** список файлов из files/ (для удаления при деинсталляции) */
+  /** files/ 中的文件列表（用于卸载时删除） */
   installedFiles?: string[];
 }
 
@@ -119,14 +119,14 @@ export async function fetchRegistry(): Promise<AddonManifest[]> {
 // ==================== .gaa pack / unpack ====================
 
 /**
- * Распаковать .gaa (zip) файл во временную директорию.
- * Возвращает путь к распакованной папке.
+ * 解压 .gaa (zip) 文件到临时目录。
+ * 返回解压后的文件夹路径。
  */
 export async function unpackGaa(gaaPath: string): Promise<string> {
   const tmpDir = path.join(os.tmpdir(), `gaa-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   await fs.mkdir(tmpDir, { recursive: true });
   await execFileAsync("unzip", ["-o", "-q", gaaPath, "-d", tmpDir]);
-  // Проверяем — если архив содержит одну подпапку, заходим внутрь
+  // 检查 — 如果压缩包只包含一个子文件夹，进入该文件夹
   const entries = await fs.readdir(tmpDir);
   if (entries.length === 1) {
     const sub = path.join(tmpDir, entries[0]!);
@@ -136,15 +136,15 @@ export async function unpackGaa(gaaPath: string): Promise<string> {
       try {
         await fs.access(innerManifest);
         return sub;
-      } catch { /* manifest в корне */ }
+      } catch { /* manifest 在根目录 */ }
     }
   }
   return tmpDir;
 }
 
 /**
- * Запаковать папку аддона в .gaa файл.
- * Возвращает путь к созданному .gaa файлу.
+ * 将插件文件夹打包为 .gaa 文件。
+ * 返回创建的 .gaa 文件路径。
  */
 export async function packGaa(addonDir: string, outputPath?: string): Promise<string> {
   const manifestPath = path.join(addonDir, "manifest.json");
@@ -154,7 +154,7 @@ export async function packGaa(addonDir: string, outputPath?: string): Promise<st
 
   const out = outputPath ?? path.join(process.cwd(), `${manifest.id}.gaa`);
 
-  // Удаляем старый если есть
+  // 删除旧文件（如果存在）
   try { await fs.unlink(out); } catch { /* ok */ }
 
   const dirName = path.basename(addonDir);
@@ -169,8 +169,8 @@ export async function packGaa(addonDir: string, outputPath?: string): Promise<st
 import { readConfig, writeConfig, writeMd } from "../storage/md.js";
 
 /**
- * Установка аддона из распакованной папки.
- * Применяет файлы, config.patch.json, тему.
+ * 从解压后的文件夹安装插件。
+ * 应用文件、config.patch.json、主题。
  */
 export async function installFromDir(
   addonDir: string,
@@ -185,7 +185,7 @@ export async function installFromDir(
   const applied: string[] = [];
   const installedFiles: string[] = [];
 
-  // 1. Копируем файлы из files/ в профиль
+  // 1. 将 files/ 中的文件复制到配置文件
   const filesDir = path.join(addonDir, "files");
   try {
     const fileStat = await fs.stat(filesDir);
@@ -196,11 +196,11 @@ export async function installFromDir(
         await writeMd(profileSlug, relPath, content);
         installedFiles.push(relPath);
       }
-      if (fileEntries.length) applied.push(`${fileEntries.length} файл(ов) скопировано`);
+      if (fileEntries.length) applied.push(`${fileEntries.length} 个文件已复制`);
     }
-  } catch { /* нет директории files/ — ок */ }
+  } catch { /* 没有 files/ 目录 — 没问题 */ }
 
-  // 2. Применяем config.patch.json
+  // 2. 应用 config.patch.json
   const patchPath = path.join(addonDir, "config.patch.json");
   try {
     const patchRaw = await fs.readFile(patchPath, "utf8");
@@ -210,12 +210,12 @@ export async function installFromDir(
       if (cfg) {
         deepMerge(cfg as unknown as Record<string, unknown>, patch);
         await writeConfig(cfg);
-        applied.push(`config (${Object.keys(patch).length} полей)`);
+        applied.push(`config (${Object.keys(patch).length} 个字段)`);
       }
     }
-  } catch { /* нет config.patch.json — ок */ }
+  } catch { /* 没有 config.patch.json — 没问题 */ }
 
-  // 3. Применяем code.patch (git apply)
+  // 3. 应用 code.patch (git apply)
   const codePatchPath = path.join(addonDir, "code.patch");
   try {
     const patchContent = await fs.readFile(codePatchPath, "utf8");
@@ -224,29 +224,29 @@ export async function installFromDir(
       try {
         await execFileAsync("git", ["apply", "--check", codePatchPath], { cwd: projectRoot });
         await execFileAsync("git", ["apply", codePatchPath], { cwd: projectRoot });
-        applied.push("code.patch применён");
+        applied.push("code.patch 已应用");
       } catch (e) {
-        applied.push(`code.patch: ${(e as Error)?.message ?? "ошибка применения"}`);
+        applied.push(`code.patch: ${(e as Error)?.message ?? "应用错误"}`);
       }
     }
-  } catch { /* нет code.patch — ок */ }
+  } catch { /* 没有 code.patch — 没问题 */ }
 
-  // 4. Сохраняем тему (theme.css)
+  // 4. 保存主题 (theme.css)
   const themePath = path.join(addonDir, "theme.css");
   try {
     const css = await fs.readFile(themePath, "utf8");
     const dir = await ensureDir();
     await fs.writeFile(path.join(dir, `theme-${manifest.id}.css`), css, "utf8");
-    applied.push("тема установлена");
-  } catch { /* нет theme.css — ок */ }
+    applied.push("主题已安装");
+  } catch { /* 没有 theme.css — 没问题 */ }
 
-  // 5. Сохраняем .gaa копию в addons/
+  // 5. 将 .gaa 副本保存到 addons/
   const dir = await ensureDir();
   const addonStorePath = path.join(dir, manifest.id);
   await fs.mkdir(addonStorePath, { recursive: true });
-  // Копируем manifest
+  // 复制 manifest
   await fs.copyFile(manifestPath, path.join(addonStorePath, "manifest.json"));
-  // Копируем весь контент
+  // 复制全部内容
   const allFiles = await walkDir(addonDir);
   for (const f of allFiles) {
     if (f === "manifest.json") continue;
@@ -256,7 +256,7 @@ export async function installFromDir(
     await fs.copyFile(src, dst);
   }
 
-  // 5. Записываем в installed.json
+  // 5. 写入 installed.json
   const list = await listInstalled();
   const item: InstalledAddon = {
     manifest,
@@ -274,7 +274,7 @@ export async function installFromDir(
 }
 
 /**
- * Установка .gaa файла.
+ * 安装 .gaa 文件。
  */
 export async function installFromGaa(
   gaaPath: string,
@@ -284,13 +284,13 @@ export async function installFromGaa(
   try {
     return await installFromDir(dir, profileSlug, "file");
   } finally {
-    // Чистим tmp
+    // 清理临时目录
     await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
 /**
- * Установка аддона из реестра (скачиваем .gaa по URL из реестра).
+ * 从注册表安装插件（从注册表 URL 下载 .gaa）。
  */
 export async function installFromRegistry(
   id: string,
@@ -299,7 +299,7 @@ export async function installFromRegistry(
 ): Promise<{ addon: InstalledAddon; applied: string[] }> {
   const url = registryManifest.downloadUrl;
   if (!url) {
-    // Если нет downloadUrl — это legacy манифест, ставим как JSON-based
+    // 如果没有 downloadUrl — 这是旧版清单，按 JSON 方式安装
     const list = await listInstalled();
     const item: InstalledAddon = {
       manifest: registryManifest,
@@ -314,9 +314,9 @@ export async function installFromRegistry(
     return { addon: item, applied: [] };
   }
 
-  // Скачиваем .gaa
+  // 下载 .gaa
   const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
-  if (!res.ok) throw new Error(`Не удалось скачать аддон: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`下载插件失败：HTTP ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
   const tmpGaa = path.join(os.tmpdir(), `${id}-${Date.now()}.gaa`);
   await fs.writeFile(tmpGaa, buf);
@@ -332,12 +332,12 @@ export async function uninstall(id: string): Promise<boolean> {
   const next = list.filter(a => a.manifest.id !== id);
   if (next.length === list.length) return false;
 
-  // Удаляем хранилище аддона
+  // 删除插件存储
   const dir = addonsDir();
   const addonStore = path.join(dir, id);
   await fs.rm(addonStore, { recursive: true, force: true }).catch(() => {});
 
-  // Удаляем тему если была
+  // 删除主题（如果存在）
   const themePath = path.join(dir, `theme-${id}.css`);
   await fs.unlink(themePath).catch(() => {});
 
@@ -376,7 +376,7 @@ export function validateManifest(m: unknown): asserts m is AddonManifest {
 
 // ==================== helpers ====================
 
-/** Рекурсивно обходит директорию, возвращает относительные пути файлов. */
+/** 递归遍历目录，返回文件的相对路径。 */
 async function walkDir(dir: string, prefix = ""): Promise<string[]> {
   const result: string[] = [];
   const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -391,7 +391,7 @@ async function walkDir(dir: string, prefix = ""): Promise<string[]> {
   return result;
 }
 
-/** Глубокий мёрдж объектов (source перезаписывает target). */
+/** 深度合并对象（source 覆盖 target）。 */
 function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): void {
   for (const key of Object.keys(source)) {
     const sv = source[key];
@@ -405,7 +405,7 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
 }
 
 /**
- * Получить содержимое README.md аддона (если есть).
+ * 获取插件的 README.md 内容（如果存在）。
  */
 export async function getAddonReadme(id: string): Promise<string | null> {
   const dir = addonsDir();
@@ -418,7 +418,7 @@ export async function getAddonReadme(id: string): Promise<string | null> {
 }
 
 /**
- * Получить список файлов аддона.
+ * 获取插件文件列表。
  */
 export async function getAddonFiles(id: string): Promise<string[]> {
   const dir = addonsDir();

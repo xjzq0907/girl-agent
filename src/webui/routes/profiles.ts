@@ -313,7 +313,7 @@ export function registerProfileRoutes(r: Router): void {
     try {
       const llm = makeLLM(cfg.llm);
       const reply = await llm.chat([
-        { role: "system", content: "Ответь одним коротким словом 'ok'." },
+        { role: "system", content: "用一个短词回答 'ok'。" },
         { role: "user", content: "ping" }
       ], { temperature: 0, maxTokens: 16 });
       return { ok: true, reply: reply.slice(0, 200) };

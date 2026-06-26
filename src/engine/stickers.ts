@@ -10,7 +10,7 @@ export interface StickerChoice {
 }
 
 const DEFAULT_LIBRARY = `# sticker library
-# Добавляй по одному file_id на строку:
+# 每行添加一个 file_id:
 # CAACAgIAAxkBAA... | 😂 | laugh,funny
 `;
 

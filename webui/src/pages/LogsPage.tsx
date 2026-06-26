@@ -5,11 +5,11 @@ import { api, logsSocket, statusSocket } from "../lib/api";
 interface LogEvent { type: string; text?: string; t: number }
 
 const SCORE_KEYS: { key: string; label: string; negative?: boolean }[] = [
-  { key: "interest", label: "Интерес" },
-  { key: "trust", label: "Доверие" },
-  { key: "attraction", label: "Влечение" },
-  { key: "annoyance", label: "Раздражение", negative: true },
-  { key: "cringe", label: "Кринж", negative: true }
+  { key: "interest", label: "兴趣" },
+  { key: "trust", label: "信任" },
+  { key: "attraction", label: "吸引力" },
+  { key: "annoyance", label: "恼怒", negative: true },
+  { key: "cringe", label: "尴尬", negative: true }
 ];
 
 export function LogsPage() {
@@ -80,9 +80,9 @@ export function LogsPage() {
     return (
       <div className="empty">
         <div className="em-icon">✦</div>
-        <div className="em-title">Профилей пока нет</div>
-        <div>Создайте первый профиль, чтобы начать.</div>
-        <button className="btn primary" onClick={() => showSetupFlow(true)}>Создать профиль</button>
+        <div className="em-title">暂无个人资料</div>
+        <div>创建第一个个人资料以开始。</div>
+        <button className="btn primary" onClick={() => showSetupFlow(true)}>创建个人资料</button>
       </div>
     );
   }
@@ -92,11 +92,11 @@ export function LogsPage() {
       <div className="card">
         <div className="card-header">
           <div>
-            <div className="h-title">Статус</div>
+            <div className="h-title">状态</div>
             <div className="h-meta">
               <span className={`chip ${statusState === "running" ? "success" : statusState === "error" ? "error" : ""}`}>{statusLabel(statusState)}</span>
               {active?.lastError && <span className="chip error" style={{ marginLeft: 8 }}>{active.lastError}</span>}
-              {stage && <span className="chip accent" style={{ marginLeft: 8 }}>стадия: {stage}</span>}
+              {stage && <span className="chip accent" style={{ marginLeft: 8 }}>阶段: {stage}</span>}
             </div>
           </div>
           <div className="h-actions">
@@ -104,7 +104,7 @@ export function LogsPage() {
             <button className="btn tiny" onClick={() => void runCommand(activeSlug, "why")}>:why</button>
             <button className="btn tiny" onClick={() => void runCommand(activeSlug, "wake")}>:wake</button>
             <button className="btn tiny" onClick={() => void runCommand(activeSlug, "debug")}>:debug</button>
-            <button className="btn tiny danger" onClick={() => { if (confirm("Сбросить relationship?")) void runCommand(activeSlug, "reset"); }}>:reset</button>
+            <button className="btn tiny danger" onClick={() => { if (confirm("重置关系？")) void runCommand(activeSlug, "reset"); }}>:reset</button>
           </div>
         </div>
         {score && (
@@ -122,17 +122,17 @@ export function LogsPage() {
 
       <div style={{ display: "flex", gap: 8 }}>
         <button className={`btn tiny ${tab === "live" ? "primary" : ""}`} onClick={() => setTab("live")}>Live ({events.length})</button>
-        <button className={`btn tiny ${tab === "files" ? "primary" : ""}`} onClick={() => setTab("files")}>Журнал по дням ({days.length})</button>
+        <button className={`btn tiny ${tab === "files" ? "primary" : ""}`} onClick={() => setTab("files")}>按天日志 ({days.length})</button>
       </div>
 
       {tab === "live" && (
         <div className="card">
           <div className="card-header">
-            <div className="h-title">События runtime'а</div>
+            <div className="h-title">运行时事件</div>
             <div className="h-actions">
-              <input className="input" placeholder="поиск..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: 160, padding: "5px 10px" }} />
+              <input className="input" placeholder="搜索..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: 160, padding: "5px 10px" }} />
               <select className="select" style={{ width: 120 }} value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
-                <option value="all">все</option>
+                <option value="all">全部</option>
                 <option value="in">in</option>
                 <option value="out">out</option>
                 <option value="info">info</option>
@@ -142,16 +142,16 @@ export function LogsPage() {
               <label className="toggle">
                 <input type="checkbox" checked={autoscroll} onChange={(e) => setAutoscroll(e.target.checked)} />
                 <span className="track"><span className="knob" /></span>
-                <span style={{ fontSize: 12 }}>автоскролл</span>
+                <span style={{ fontSize: 12 }}>自动滚动</span>
               </label>
-              <button className="btn tiny ghost" onClick={() => setEvents([])}>Очистить</button>
+              <button className="btn tiny ghost" onClick={() => setEvents([])}>清空</button>
             </div>
           </div>
           <div className="logs-box" ref={boxRef}>
-            {filteredEvents.length === 0 && <div style={{ color: "var(--ga-text-faint)" }}>(нет событий)</div>}
+            {filteredEvents.length === 0 && <div style={{ color: "var(--ga-text-faint)" }}>(无事件)</div>}
             {filteredEvents.map((e, i) => (
               <div key={i} className={`log-line ${e.type}`}>
-                <span className="ts">{new Date(e.t).toLocaleTimeString("ru-RU", { hour12: false })}</span>
+                <span className="ts">{new Date(e.t).toLocaleTimeString("zh-CN", { hour12: false })}</span>
                 <span className="tag">[{e.type}]</span>
                 <span className="msg">{e.text ?? JSON.stringify(e)}</span>
               </div>
@@ -163,13 +163,13 @@ export function LogsPage() {
       {tab === "files" && (
         <div className="memory-shell">
           <div className="card" style={{ padding: 14, overflowY: "auto", maxHeight: "70vh" }}>
-            <div className="h-title" style={{ marginBottom: 8 }}>Дни с разговорами</div>
+            <div className="h-title" style={{ marginBottom: 8 }}>有对话的天数</div>
             <div className="memory-list">
-              {days.length === 0 && <div className="hint">пока нет записей</div>}
+              {days.length === 0 && <div className="hint">暂无记录</div>}
               {days.slice().reverse().map(d => (
                 <div key={d.date} className={`memory-item ${activeDay === d.date ? "active" : ""}`} onClick={() => setActiveDay(d.date)}>
                   <div className="name">{d.date}</div>
-                  <div className="size">{d.lines} стр</div>
+                  <div className="size">{d.lines} 行</div>
                 </div>
               ))}
             </div>
@@ -178,10 +178,10 @@ export function LogsPage() {
             <div className="card-header">
               <div className="h-title">{activeDay ?? "—"}</div>
               <div className="h-actions">
-                <span className="chip">{dayContent.length} символов</span>
+                <span className="chip">{dayContent.length} 字符</span>
               </div>
             </div>
-            <pre className="logs-box" style={{ flex: 1, height: "auto", maxHeight: "70vh" }}>{dayContent || "(пусто)"}</pre>
+            <pre className="logs-box" style={{ flex: 1, height: "auto", maxHeight: "70vh" }}>{dayContent || "(空)"}</pre>
           </div>
         </div>
       )}
@@ -191,10 +191,10 @@ export function LogsPage() {
 
 function statusLabel(s: string): string {
   switch (s) {
-    case "running": return "● работает";
-    case "paused": return "‖ пауза";
-    case "error": return "! ошибка";
+    case "running": return "● 运行中";
+    case "paused": return "‖ 暂停";
+    case "error": return "! 错误";
     case "stopped":
-    default: return "○ остановлен";
+    default: return "○ 已停止";
   }
 }

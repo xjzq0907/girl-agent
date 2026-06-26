@@ -26,8 +26,8 @@ export function ConfigurationPage() {
     return (
       <div className="empty">
         <div className="em-icon">⚙</div>
-        <div className="em-title">Создайте профиль</div>
-        <button className="btn primary" onClick={() => showSetupFlow(true)}>Открыть Setup Flow</button>
+        <div className="em-title">创建资料</div>
+        <button className="btn primary" onClick={() => showSetupFlow(true)}>打开设置向导</button>
       </div>
     );
   }
@@ -55,11 +55,11 @@ export function ConfigurationPage() {
     setGenerating(true);
     try {
       await api.generatePersona(cfg.slug, { name: merged.name, age: merged.age, nationality: merged.nationality, notes: merged.personaNotes });
-      toast("Персона сгенерирована — проверьте файлы памяти", "success");
+      toast("人设已生成 — 请检查记忆文件", "success");
       await refreshActive();
       setTab("memory");
     } catch (e) {
-      toast(`Генерация не удалась: ${(e as Error)?.message}`, "error");
+      toast(`生成失败：${(e as Error)?.message}`, "error");
     } finally {
       setGenerating(false);
     }
@@ -78,13 +78,13 @@ export function ConfigurationPage() {
 
   async function deleteProfile() {
     if (!cfg) return;
-    if (!confirm(`Удалить профиль ${cfg.name} (${cfg.slug}) безвозвратно? Все его данные будут стёрты.`)) return;
+    if (!confirm(`确认永久删除资料 ${cfg.name} (${cfg.slug})？所有数据将被清除。`)) return;
     try {
       await api.deleteProfile(cfg.slug);
-      toast("Профиль удалён", "success");
+      toast("资料已删除", "success");
       window.location.reload();
     } catch (e) {
-      toast(`Не удалось удалить: ${(e as Error)?.message}`, "error");
+      toast(`删除失败：${(e as Error)?.message}`, "error");
     }
   }
 
@@ -97,65 +97,65 @@ export function ConfigurationPage() {
 
       <div className="card">
         <div className="card-header">
-          <div className="h-title">Личность</div>
-          <div className="h-meta">базовые поля персоны</div>
+          <div className="h-title">人设</div>
+          <div className="h-meta">人设基础字段</div>
           <div className="h-actions">
-            <button className="btn tiny" disabled={generating} onClick={() => void genPersona()}>{generating ? "Генерируем..." : "Перегенерить персону"}</button>
+            <button className="btn tiny" disabled={generating} onClick={() => void genPersona()}>{generating ? "生成中..." : "重新生成人设"}</button>
           </div>
         </div>
         <div className="grid cols-2">
-          <div className="form-row"><label>Имя</label><input className="input" value={merged.name} onChange={e => pf("name", e.target.value)} /></div>
-          <div className="form-row"><label>Возраст</label><input type="number" className="input" min={18} max={45} value={merged.age} onChange={e => pf("age", Number(e.target.value))} /></div>
-          <div className="form-row"><label>Национальность</label>
+          <div className="form-row"><label>姓名</label><input className="input" value={merged.name} onChange={e => pf("name", e.target.value)} /></div>
+          <div className="form-row"><label>年龄</label><input type="number" className="input" min={18} max={45} value={merged.age} onChange={e => pf("age", Number(e.target.value))} /></div>
+          <div className="form-row"><label>国籍</label>
             <select className="select" value={merged.nationality} onChange={e => pf("nationality", e.target.value as "RU" | "UA")}>
-              <option value="RU">Россия</option>
-              <option value="UA">Україна</option>
+              <option value="RU">俄罗斯</option>
+              <option value="UA">乌克兰</option>
             </select>
           </div>
-          <div className="form-row"><label>Часовой пояс</label><input className="input" value={merged.tz} onChange={e => pf("tz", e.target.value)} placeholder="Europe/Moscow" /></div>
+          <div className="form-row"><label>时区</label><input className="input" value={merged.tz} onChange={e => pf("tz", e.target.value)} placeholder="Europe/Moscow" /></div>
         </div>
         <div className="form-row">
-          <label>Заметки для персоны (свободный текст)</label>
-          <textarea className="textarea" value={merged.personaNotes ?? ""} onChange={e => pf("personaNotes", e.target.value)} placeholder="например: студентка дизайна, любит кошек, играет в visual novels, только что переехала в Москву..." />
-          <div className="hint">Эти заметки используются при генерации персоны (persona.md / speech.md / communication.md)</div>
+          <label>人设备注（自由文本）</label>
+          <textarea className="textarea" value={merged.personaNotes ?? ""} onChange={e => pf("personaNotes", e.target.value)} placeholder="例如：设计专业学生，喜欢猫，玩视觉小说，刚搬到莫斯科..." />
+          <div className="hint">这些备注用于生成人设（persona.md / speech.md / communication.md）</div>
         </div>
       </div>
 
       <div className="card">
         <div className="card-header">
           <div className="h-title">Telegram</div>
-          <div className="h-meta">режим подключения и токен</div>
+          <div className="h-meta">连接模式与令牌</div>
         </div>
         <div className="form-row">
-          <label>Режим</label>
+          <label>模式</label>
           <select className="select" value={merged.mode} onChange={e => pf("mode", e.target.value as "bot" | "userbot")}>
-            <option value="bot">bot — Bot API (нужен @BotFather токен)</option>
-            <option value="userbot">userbot — MTProto (телефон; api_id/api_hash опционально)</option>
+            <option value="bot">bot — Bot API（需要 @BotFather 令牌）</option>
+            <option value="userbot">userbot — MTProto（手机号；api_id/api_hash 可选）</option>
           </select>
           <div className="hint">{merged.mode === "bot"
-            ? "Бот может писать только тем, кто уже добавил его в чат через /start. Подходит большинству."
-            : "Userbot подключается под обычный TG-аккаунт. Может писать всем по username/телефону. Используй на своём аккаунте."}</div>
+            ? "机器人只能向已通过 /start 添加它的用户发送消息。适合大多数场景。"
+            : "Userbot 使用普通 TG 账号连接。可按用户名/手机号向所有人发送消息。请在自己的账号上使用。"}</div>
         </div>
         {merged.mode === "bot" ? (
           <div className="grid cols-2">
             <div className="form-row">
               <label>Bot Token</label>
               <input className="input" type="password" value={merged.telegram.botToken ?? ""} onChange={e => pfDeep("telegram.botToken", e.target.value)} placeholder="123456789:AAFxxxxxxxxx" />
-              <div className="hint">Получи у <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> командой /newbot</div>
+              <div className="hint">在 <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> 通过 /newbot 命令获取</div>
             </div>
             <div className="form-row">
-              <label>Bot API endpoint (опционально)</label>
-              <input className="input" value={merged.telegram.botApi?.apiRoot ?? ""} onChange={e => pfDeep("telegram.botApi", { ...(merged.telegram.botApi ?? {}), apiRoot: e.target.value || undefined })} placeholder="https://api.telegram.org или свой reverse proxy" />
-              <div className="hint">Для Bot API прокси/локального сервера. Можно оставить пустым.</div>
+              <label>Bot API 端点（可选）</label>
+              <input className="input" value={merged.telegram.botApi?.apiRoot ?? ""} onChange={e => pfDeep("telegram.botApi", { ...(merged.telegram.botApi ?? {}), apiRoot: e.target.value || undefined })} placeholder="https://api.telegram.org 或自定义反向代理" />
+              <div className="hint">用于 Bot API 代理/本地服务器。可留空。</div>
             </div>
           </div>
         ) : (
           <div className="grid cols-2">
-            <div className="form-row"><label>API ID (опционально)</label><input className="input" value={merged.telegram.apiId ?? ""} onChange={e => pfDeep("telegram.apiId", Number(e.target.value) || undefined)} placeholder="пусто = прокси автора" /></div>
-            <div className="form-row"><label>API Hash (опционально)</label><input className="input" type="password" value={merged.telegram.apiHash ?? ""} onChange={e => pfDeep("telegram.apiHash", e.target.value || undefined)} placeholder="пусто = прокси автора" /></div>
-            <div className="form-row"><label>Телефон</label><input className="input" value={merged.telegram.phone ?? ""} onChange={e => pfDeep("telegram.phone", e.target.value)} placeholder="+79..." /></div>
-            <div className="form-row"><label>Session String (если есть)</label><input className="input" type="password" value={merged.telegram.sessionString ?? ""} onChange={e => pfDeep("telegram.sessionString", e.target.value)} /></div>
-            <div className="hint" style={{ gridColumn: "1 / -1" }}>Оставь API ID/Hash пустыми, если входил через «прокси автора».</div>
+            <div className="form-row"><label>API ID（可选）</label><input className="input" value={merged.telegram.apiId ?? ""} onChange={e => pfDeep("telegram.apiId", Number(e.target.value) || undefined)} placeholder="留空 = 作者代理" /></div>
+            <div className="form-row"><label>API Hash（可选）</label><input className="input" type="password" value={merged.telegram.apiHash ?? ""} onChange={e => pfDeep("telegram.apiHash", e.target.value || undefined)} placeholder="留空 = 作者代理" /></div>
+            <div className="form-row"><label>手机号</label><input className="input" value={merged.telegram.phone ?? ""} onChange={e => pfDeep("telegram.phone", e.target.value)} placeholder="+79..." /></div>
+            <div className="form-row"><label>Session String（如有）</label><input className="input" type="password" value={merged.telegram.sessionString ?? ""} onChange={e => pfDeep("telegram.sessionString", e.target.value)} /></div>
+            <div className="hint" style={{ gridColumn: "1 / -1" }}>如果通过"作者代理"登录，请将 API ID/Hash 留空。</div>
           </div>
         )}
         <div className="grid cols-2">
@@ -163,38 +163,38 @@ export function ConfigurationPage() {
             <label className="toggle">
               <input type="checkbox" checked={merged.telegram.useWSS !== false} onChange={e => pfDeep("telegram.useWSS", e.target.checked)} />
               <span className="track"><span className="knob" /></span>
-              <span>WSS (websocket, обходит блокировки РФ)</span>
+              <span>WSS（websocket，绕过俄罗斯封锁）</span>
             </label>
           </div>
           <div className="form-row">
-            <label>Прокси (опционально)</label>
-            <input className="input" value={merged.telegram.proxy ?? ""} onChange={e => pfDeep("telegram.proxy", e.target.value)} placeholder="tg://proxy?... или socks5://user:pass@host:port" />
+            <label>代理（可选）</label>
+            <input className="input" value={merged.telegram.proxy ?? ""} onChange={e => pfDeep("telegram.proxy", e.target.value)} placeholder="tg://proxy?... 或 socks5://user:pass@host:port" />
           </div>
         </div>
         <div className="form-row">
           <label>Privacy</label>
           <select className="select" value={merged.privacy ?? "owner-only"} onChange={e => pf("privacy", e.target.value as "owner-only" | "allow-strangers")}>
-            <option value="owner-only">только владельцу — отвечает только тебе (по ownerId)</option>
-            <option value="allow-strangers">всем — отвечает любому, кто пишет</option>
+            <option value="owner-only">仅限主人 — 只回复你（按 ownerId）</option>
+            <option value="allow-strangers">所有人 — 回复任何发消息的人</option>
           </select>
         </div>
         <div className="form-row">
           <label>Owner ID (Telegram user id)</label>
-          <input className="input" type="number" value={merged.ownerId ?? ""} onChange={e => pf("ownerId", Number(e.target.value) || undefined)} placeholder="напиши боту /start чтобы он сообщил твой id" />
+          <input className="input" type="number" value={merged.ownerId ?? ""} onChange={e => pf("ownerId", Number(e.target.value) || undefined)} placeholder="向机器人发送 /start 以获取你的 ID" />
         </div>
       </div>
 
       <div className="card">
         <div className="card-header">
           <div className="h-title">LLM</div>
-          <div className="h-meta">модель и провайдер</div>
+          <div className="h-meta">模型与提供商</div>
           <div className="h-actions">
-            <button className="btn tiny" onClick={() => void testLLM()}>Тест соединения</button>
+            <button className="btn tiny" onClick={() => void testLLM()}>测试连接</button>
           </div>
         </div>
         <div className="grid cols-2">
           <div className="form-row">
-            <label>Провайдер (preset)</label>
+            <label>提供商（preset）</label>
             <select className="select" value={merged.llm.presetId} onChange={e => {
               const id = e.target.value;
               const p = llmPresets.find(x => x.id === id);
@@ -202,20 +202,20 @@ export function ConfigurationPage() {
             }}>
               {llmPresets.map(p => (
                 <option key={p.id} value={p.id} disabled={p.disabled}>
-                  {p.name}{p.recommended ? " ★" : ""}{p.disabled ? ` — ${p.disabledReason ?? "недоступен"}` : ""}
+                  {p.name}{p.recommended ? " ★" : ""}{p.disabled ? ` — ${p.disabledReason ?? "不可用"}` : ""}
                 </option>
               ))}
             </select>
             {llmPreset?.hint && <div className="hint">{llmPreset.hint}</div>}
           </div>
           <div className="form-row">
-            <label>Модель</label>
+            <label>模型</label>
             {llmPreset?.models?.length ? (
               <select className="select" value={merged.llm.model} onChange={e => pfDeep("llm.model", e.target.value)}>
                 {llmPreset.models.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             ) : (
-              <input className="input" value={merged.llm.model} onChange={e => pfDeep("llm.model", e.target.value)} placeholder="название модели" />
+              <input className="input" value={merged.llm.model} onChange={e => pfDeep("llm.model", e.target.value)} placeholder="模型名称" />
             )}
           </div>
           {llmPreset?.apiKeyRequired !== false && (
@@ -236,15 +236,15 @@ export function ConfigurationPage() {
       <div className="card">
         <div className="card-header">
           <div className="h-title">Minor LLM</div>
-          <div className="h-meta">дешёвая модель для проверок и служебных задач</div>
+          <div className="h-meta">用于检查和辅助任务的廉价模型</div>
         </div>
         <div className="form-row">
           <label className="toggle">
             <input type="checkbox" checked={minor.enabled} onChange={e => pf("minorLlm", { ...minor, enabled: e.target.checked })} />
             <span className="track"><span className="knob" /></span>
-            <span>Использовать minor model</span>
+            <span>使用 minor 模型</span>
           </label>
-          <div className="hint">Основная модель продолжает писать сообщения, agenda и persona. Minor сейчас используется для проверки ответа перед отправкой.</div>
+          <div className="hint">主模型继续撰写消息、日程和人设。Minor 目前用于发送前检查回复。</div>
         </div>
         {minor.enabled && (
           <>
@@ -252,29 +252,29 @@ export function ConfigurationPage() {
               <label className="toggle">
                 <input type="checkbox" checked={minor.sameAsMain !== false} onChange={e => pf("minorLlm", { ...minor, sameAsMain: e.target.checked })} />
                 <span className="track"><span className="knob" /></span>
-                <span>Такая же как основная</span>
+                <span>与主模型相同</span>
               </label>
             </div>
             {minor.sameAsMain === false && (
               <div className="grid cols-2">
                 <div className="form-row">
-                  <label>Провайдер minor</label>
+                  <label>Minor 提供商</label>
                   <select className="select" value={minor.presetId} onChange={e => {
                     const id = e.target.value;
                     const p = llmPresets.find(x => x.id === id);
                     if (p && !p.disabled) pf("minorLlm", { ...minor, enabled: true, sameAsMain: false, presetId: p.id, proto: p.proto, baseURL: p.baseURL, apiKey: minor.apiKey ?? "", model: p.defaultModel });
                   }}>
-                    {llmPresets.map(p => <option key={p.id} value={p.id} disabled={p.disabled}>{p.name}{p.disabled ? ` — ${p.disabledReason ?? "недоступен"}` : ""}</option>)}
+                    {llmPresets.map(p => <option key={p.id} value={p.id} disabled={p.disabled}>{p.name}{p.disabled ? ` — ${p.disabledReason ?? "不可用"}` : ""}</option>)}
                   </select>
                 </div>
                 <div className="form-row">
-                  <label>Модель minor</label>
+                  <label>Minor 模型</label>
                   {minorPreset?.models?.length ? (
                     <select className="select" value={minor.model} onChange={e => pf("minorLlm", { ...minor, model: e.target.value })}>
                       {minorPreset.models.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   ) : (
-                    <input className="input" value={minor.model} onChange={e => pf("minorLlm", { ...minor, model: e.target.value })} placeholder="название модели" />
+                    <input className="input" value={minor.model} onChange={e => pf("minorLlm", { ...minor, model: e.target.value })} placeholder="模型名称" />
                   )}
                 </div>
                 {minorPreset?.apiKeyRequired !== false && (
@@ -295,8 +295,8 @@ export function ConfigurationPage() {
 
       <div className="card">
         <div className="card-header">
-          <div className="h-title">Стадия отношений</div>
-          <div className="h-meta">9 уровней: от «дала тг» до «расстались»</div>
+          <div className="h-title">关系阶段</div>
+          <div className="h-meta">9 个等级：从"给了 TG"到"分手"</div>
         </div>
         <div className="form-row">
           <select className="select" value={merged.stage} onChange={e => pf("stage", e.target.value)}>
@@ -308,8 +308,8 @@ export function ConfigurationPage() {
 
       <div className="card">
         <div className="card-header">
-          <div className="h-title">Стиль общения</div>
-          <div className="h-meta">пресет, который собирает 4 параметра</div>
+          <div className="h-title">交流风格</div>
+          <div className="h-meta">汇总 4 个参数的预设</div>
         </div>
         <div className="grid cols-2">
           {comms.map(c => {
@@ -324,21 +324,21 @@ export function ConfigurationPage() {
           })}
         </div>
         <div className="form-row" style={{ marginTop: 12 }}>
-          <label>Тенденция игнора: {merged.ignoreTendency ?? 35}%</label>
+          <label>忽略倾向：{merged.ignoreTendency ?? 35}%</label>
           <input type="range" className="range" min={0} max={100} value={merged.ignoreTendency ?? 35} onChange={e => pf("ignoreTendency", Number(e.target.value))} />
-          <div className="hint">0% — почти не игнорит без причины. 100% — очень холодная.</div>
+          <div className="hint">0% — 几乎不会无故忽略。100% — 非常冷淡。</div>
         </div>
       </div>
 
       <div className="card">
         <div className="card-header">
-          <div className="h-title">Сон</div>
+          <div className="h-title">睡眠</div>
         </div>
         <div className="grid cols-2">
-          <div className="form-row"><label>Засыпает в (час)</label><input type="number" min={0} max={23} className="input" value={merged.sleepFrom} onChange={e => pf("sleepFrom", Number(e.target.value))} /></div>
-          <div className="form-row"><label>Просыпается в (час)</label><input type="number" min={0} max={23} className="input" value={merged.sleepTo} onChange={e => pf("sleepTo", Number(e.target.value))} /></div>
+          <div className="form-row"><label>入睡时间（小时）</label><input type="number" min={0} max={23} className="input" value={merged.sleepFrom} onChange={e => pf("sleepFrom", Number(e.target.value))} /></div>
+          <div className="form-row"><label>起床时间（小时）</label><input type="number" min={0} max={23} className="input" value={merged.sleepTo} onChange={e => pf("sleepTo", Number(e.target.value))} /></div>
           <div className="form-row" style={{ gridColumn: "span 2" }}>
-            <label>Шанс ночного отклика: {Math.round((merged.nightWakeChance ?? 0) * 100)}%</label>
+            <label>夜间回复概率：{Math.round((merged.nightWakeChance ?? 0) * 100)}%</label>
             <input type="range" min={0} max={100} className="range" value={Math.round((merged.nightWakeChance ?? 0) * 100)} onChange={e => pf("nightWakeChance", Number(e.target.value) / 100)} />
           </div>
         </div>
@@ -347,11 +347,11 @@ export function ConfigurationPage() {
 
       <div className="card" style={{ borderColor: "rgba(255, 122, 140, 0.3)" }}>
         <div className="card-header">
-          <div className="h-title" style={{ color: "var(--ga-error)" }}>Опасная зона</div>
+          <div className="h-title" style={{ color: "var(--ga-error)" }}>危险区域</div>
         </div>
         <div className="grid cols-2">
-          <button className="btn danger" onClick={() => deleteProfile()}>Удалить профиль</button>
-          <button className="btn" onClick={() => sendCommand("amnesia", toast, cfg.slug)}>Сбросить память</button>
+          <button className="btn danger" onClick={() => deleteProfile()}>删除资料</button>
+          <button className="btn" onClick={() => sendCommand("amnesia", toast, cfg.slug)}>重置记忆</button>
         </div>
       </div>
     </div>
@@ -359,7 +359,7 @@ export function ConfigurationPage() {
 }
 
 async function sendCommand(cmd: string, toast: (t: string, k?: "success" | "error" | "info") => void, slug: string) {
-  if (!confirm(`Выполнить :${cmd}?`)) return;
+  if (!confirm(`确认执行 :${cmd}？`)) return;
   try {
     const r = await api.sendCommand(slug, cmd);
     toast(r.text || `${cmd} ok`, "success");

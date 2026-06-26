@@ -39,7 +39,7 @@ export function App() {
         <button
           className="sidebar-backdrop"
           data-open={sidebarOpen}
-          aria-label="закрыть меню"
+          aria-label="关闭菜单"
           onClick={() => setSidebar(false)}
         />
         <aside className="sidebar" data-open={sidebarOpen}>

@@ -1,5 +1,5 @@
-// Генерирует daily summary из session-лога когда сессия закрылась
-// (gap >= 4ч после последнего сообщения, либо при смене session-дня).
+// 当会话关闭时，从会话日志生成每日摘要
+// （最后一条消息后间隔>=4小时，或会话日期变更时）。
 
 import type { LLMClient } from "../llm/index.js";
 import type { ProfileConfig } from "../types.js";
@@ -9,19 +9,19 @@ import {
 } from "../storage/md.js";
 import { mineDailyLogToPalace } from "./memory-palace.js";
 
-const SYS = `Ты — внутренний дневник девушки. По сырому логу её переписки за день напиши КРАТКУЮ сводку для долгосрочной памяти. От первого лица, в её манере (lowercase, без markdown). Что было, что обсуждали, как она в итоге восприняла его, какие появились новые факты о нём, бесило ли что-то.`;
+const SYS = `你是女孩的内部日记。根据当天她的聊天原始日志，为长期记忆写一份简要摘要。以第一人称，用她的语气（小写，不使用markdown）。内容包括：发生了什么、讨论了什么、她最终对他的看法、关于他的新发现、是否有让她恼火的事。`;
 
 export interface DailySummary {
   day: string;
-  topics: string[];          // о чём говорили
-  newFactsAboutHim: string[]; // факты которые узнала о нём за день
-  feeling: string;           // её итоговое ощущение от дня в общении с ним
-  conflict?: string;         // если был конфликт — короткий референс
-  highlight?: string;        // самый запомнившийся момент дня
+  topics: string[];          // 谈论的话题
+  newFactsAboutHim: string[]; // 当天了解到的关于他的新事实
+  feeling: string;           // 她当天与他交流后的最终感受
+  conflict?: string;         // 如果有冲突——简要引用
+  highlight?: string;        // 当天最难忘的时刻
 }
 
 /**
- * Генерирует summary для дня. Если уже есть — перезаписывает (для случая если день ещё не закончен).
+ * 生成当天的摘要。如果已有则覆盖（用于当天尚未结束的情况）。
  */
 export async function buildDailySummary(
   llm: LLMClient,
@@ -37,20 +37,20 @@ export async function buildDailySummary(
       { role: "system", content: SYS },
       {
         role: "user",
-        content: `Имя: ${cfg.name}, ${cfg.age}. Стадия: ${cfg.stage}. День: ${day}.
+        content: `名称: ${cfg.name}, ${cfg.age}. 阶段: ${cfg.stage}. 日期: ${day}.
 
-Лог переписки за день:
+当天聊天日志：
 """
 ${log.slice(-8000)}
 """
 
-Верни STRICT JSON:
+返回严格JSON：
 {
-  "topics": ["о чём говорили (3-6 пунктов, кратко)"],
-  "newFactsAboutHim": ["новые факты о нём из этого дня (или [])"],
-  "feeling": "1-2 предложения как ОНА в итоге чувствует себя по поводу него после этого дня",
-  "conflict": "если был серьёзный конфликт — суть в одном предложении, иначе пусто",
-  "highlight": "самый запомнившийся момент (или пусто)"
+  "topics": ["谈论的话题（3-6条，简要）"],
+  "newFactsAboutHim": ["当天了解到的关于他的新事实（如果没有则为[])"],
+  "feeling": "1-2句话描述她在这一天结束后对他的感受",
+  "conflict": "如果有严重冲突——用一句话概括核心，否则为空",
+  "highlight": "最难忘的时刻（如果没有则为空）"
 }`
       }
     ], { temperature: 0.7, maxTokens: 3500, json: true });
@@ -78,23 +78,23 @@ function sanitizeSessionLogForSummary(raw: string): string {
 }
 
 function renderSummary(s: DailySummary): string {
-  const lines = [`# ${s.day}`, ``, `## ощущение`, s.feeling || "—"];
+  const lines = [`# ${s.day}`, ``, `## 感受`, s.feeling || "—"];
   if (s.topics.length) {
-    lines.push("", "## о чём говорили");
+    lines.push("", "## 谈论的话题");
     s.topics.forEach(t => lines.push(`- ${t}`));
   }
   if (s.newFactsAboutHim.length) {
-    lines.push("", "## новое о нём");
+    lines.push("", "## 关于他的新发现");
     s.newFactsAboutHim.forEach(t => lines.push(`- ${t}`));
   }
-  if (s.highlight) lines.push("", "## момент дня", s.highlight);
-  if (s.conflict) lines.push("", "## конфликт", s.conflict);
+  if (s.highlight) lines.push("", "## 当日亮点", s.highlight);
+  if (s.conflict) lines.push("", "## 冲突", s.conflict);
   return lines.join("\n");
 }
 
 /**
- * Закрывает старые сессии: для каждого session-дня кроме сегодняшнего, если summary ещё нет — генерирует.
- * Вызывается периодически из runtime.
+ * 关闭旧会话：对于除今天以外的每个会话日期，如果还没有摘要则生成。
+ * 由运行时定期调用。
  */
 export async function closeStaleSessions(llm: LLMClient, cfg: ProfileConfig): Promise<number> {
   const today = sessionDate(cfg.tz);

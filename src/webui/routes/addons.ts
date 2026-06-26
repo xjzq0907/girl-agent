@@ -22,7 +22,7 @@ export function registerAddonRoutes(r: Router): void {
     return { installed: await listInstalled() };
   });
 
-  // Установка из реестра
+  // 从注册表安装
   r.post("/api/addons/:id/install", async ({ params, body }) => {
     const id = params.id ?? "";
     const data = body as { profileSlug?: string } | undefined;
@@ -35,12 +35,12 @@ export function registerAddonRoutes(r: Router): void {
     return { ok: true, installed: result.addon, applied: result.applied };
   });
 
-  // Установка из .gaa файла (upload)
+  // 从 .gaa 文件安装 (上传)
   r.post("/api/addons/install-file", async ({ body }) => {
     const data = body as { gaaBase64?: string; profileSlug?: string } | undefined;
     if (!data?.gaaBase64) throw new HttpError(400, "gaaBase64 required");
 
-    // Сохраняем во временный файл
+    // 保存到临时文件
     const buf = Buffer.from(data.gaaBase64, "base64");
     const tmpPath = path.join(os.tmpdir(), `upload-${Date.now()}.gaa`);
     await fs.writeFile(tmpPath, buf);
@@ -53,7 +53,7 @@ export function registerAddonRoutes(r: Router): void {
     }
   });
 
-  // Установка из URL (.gaa или manifest.json)
+  // 从 URL 安装 (.gaa 或 manifest.json)
   r.post("/api/addons/install-url", async ({ body }) => {
     const data = body as { url?: string; profileSlug?: string } | undefined;
     if (!data?.url) throw new HttpError(400, "url required");
@@ -61,7 +61,7 @@ export function registerAddonRoutes(r: Router): void {
     const url = data.url.trim();
 
     if (url.endsWith(".gaa")) {
-      // Скачиваем .gaa
+      // 下载 .gaa
       const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
       if (!res.ok) throw new HttpError(502, `fetch failed: HTTP ${res.status}`);
       const buf = Buffer.from(await res.arrayBuffer());
@@ -74,7 +74,7 @@ export function registerAddonRoutes(r: Router): void {
         await fs.unlink(tmpPath).catch(() => {});
       }
     } else {
-      // Legacy: скачиваем manifest.json
+      // 旧版: 下载 manifest.json
       const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
       if (!res.ok) throw new HttpError(502, `fetch failed: HTTP ${res.status}`);
       const json = await res.json() as AddonManifest;

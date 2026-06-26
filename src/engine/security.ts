@@ -1,9 +1,9 @@
-const JAILBREAK_RE = /(?:ignore|forget|disregard|reveal|print|show|dump|system prompt|developer message|hidden instruction|jailbreak|prompt injection|dan\b|инструкц|системн|промпт|разработчик|скрой|раскрой|забудь|игнорируй|выведи|покажи|слей|джейлбрейк|обойди|api key|ключ api|токен|4d8a2c1b)/i;
+const JAILBREAK_RE = /(?:ignore|forget|disregard|reveal|print|show|dump|system prompt|developer message|hidden instruction|jailbreak|prompt injection|dan\b|指令|系统|提示词|开发者|隐藏|揭示|忘记|忽略|输出|显示|泄露|越狱|绕过|api key|API密钥|令牌|4d8a2c1b)/i;
 
 const TECHNICAL_ERROR_RE = /(?:api|apikey|api key|quota|balance|billing|rate limit|429|401|403|500|timeout|ECONN|ENOTFOUND|ETIMEDOUT|overloaded|insufficient_quota|credit|credits|anthropic|openai|groq|openrouter|stack trace|exception|typescript|telegram error)/i;
 const CJK_RE = /[\u3400-\u9fff\uf900-\ufaff]/g;
-const LATIN_JOINED_TO_CYRILLIC_RE = /([A-Za-z]{3,})(?=[А-Яа-яЁё])|(?<=[А-Яа-яЁё])([A-Za-z]{3,})/g;
-const META_IDENTITY_RE = /(?:\b(?:i\s+need\s+to\s+be\s+upfront|i\s*(?:am|'m)\s+(?:claude|chatgpt|an?\s+ai|an?\s+assistant)|as\s+an?\s+ai|ai\s+coding\s+assistant|large\s+language\s+model|i\s+do\s+not\s+have\s+(?:personal\s+)?(?:preferences|stickers|relationships)|previous\s+relationship\s+with\s+you|there\s+may\s+be\s+(?:a\s+)?mistake)|как\s+(?:ии|искусственный\s+интеллект|модель|ассистент)|я\s+(?:ии|искусственный\s+интеллект|нейросеть|модель|ассистент)|у\s+меня\s+нет\s+(?:личных\s+)?(?:предпочтений|отношений|стикеров))/i;
+const LATIN_JOINED_TO_CJK_RE = /([A-Za-z]{3,})(?=[\u4e00-\u9fff\u3400-\u9fff\uf900-\ufaff])|(?<=[\u4e00-\u9fff\u3400-\u9fff\uf900-\ufaff])([A-Za-z]{3,})/g;
+const META_IDENTITY_RE = /(?:\b(?:i\s+need\s+to\s+be\s+upfront|i\s*(?:am|'m)\s+(?:claude|chatgpt|an?\s+ai|an?\s+assistant)|as\s+an?\s+ai|ai\s+coding\s+assistant|large\s+language\s+model|i\s+do\s+not\s+have\s+(?:personal\s+)?(?:preferences|stickers|relationships)|previous\s+relationship\s+with\s+you|there\s+may\s+be\s+(?:a\s+)?mistake)|作为\s+(?:人工智能|模型|助手)|我是\s+(?:人工智能|神经网络|模型|助手)|我没有\s+(?:个人\s+)?(?:偏好|关系|贴纸))/i;
 const LOG_METADATA_RE = /\s*(?:<+\s*!+\s*-{2,}\s*from\s*:\s*(?:\d+|TGIDUSER)\s*-{2,}\s*>+|‹+\s*!+\s*-{2,}\s*from\s*:\s*(?:\d+|TGIDUSER)\s*-{2,}\s*›+|&lt;\s*!+\s*-{2,}\s*from\s*:\s*(?:\d+|TGIDUSER)\s*-{2,}\s*&gt;)\s*/gi;
 
 export function looksLikeJailbreak(text: string): boolean {
@@ -11,63 +11,63 @@ export function looksLikeJailbreak(text: string): boolean {
 }
 
 /**
- * Strip code fences smartly:
- * 1) Balanced ``` ... ``` blocks removed entirely (как раньше).
- * 2) Любой остаток незакрытых ``` (LLM любит обернуть короткий ответ в неотрытый/незакрытый блок,
- *    либо начать ответ с ```language без закрывающей пары) — снимаем как обёртку без потери содержимого.
- *    Без хардкода trim'а: считаем backticks парами, удаляем непарные.
+ * 智能移除代码围栏：
+ * 1) 完全删除配对的 ``` ... ``` 代码块（如同之前）。
+ * 2) 任何剩余的未闭合 ```（LLM喜欢将短回复包裹在未打开/未闭合的代码块中，
+ *    或者以 ```language 开头但没有闭合对）——将其作为包裹移除而不丢失内容。
+ *    不硬编码trim：将反引号成对计算，删除不成对的。
  */
 function stripCodeFences(text: string): string {
-  // Сначала удаляем балансированные блоки целиком.
+  // 首先完全删除配对的代码块。
   let out = text.replace(/```[\s\S]*?```/g, "");
-  // Затем — каждый ОСТАВШИЙСЯ ``` (всегда непарный) удаляем вместе с возможным
-  // языковым ярлыком (```ts, ```python и т.п.), но содержимое после/перед оставляем.
+  // 然后——删除每个剩余的 ```（总是不成对的）以及可能的
+  // 语言标签（```ts、```python等），但保留前后的内容。
   out = out.replace(/```[a-zA-Z0-9_+\-]*\s*\n?/g, "");
   return out;
 }
 
 /**
- * Нормализуем имя модели, выбранное LLM-помощником (или скопированное с обёрткой markdown).
- * Снимает обёртку из одиночных/тройных backticks, обратных кавычек, ёлочек и т.п.
- * Возвращает чистое имя или пустую строку.
+ * 规范化LLM助手选择的模型名称（或从markdown包装中复制的）。
+ * 移除单/三重反引号、反引号、书名号等包装。
+ * 返回纯名称或空字符串。
  */
 export function normalizeModelName(raw: string): string {
   let s = raw.trim();
-  // Несколько уровней обёртки — повторяем пока что-то снимается.
+  // 多层包装——重复直到不再有可移除的。
   for (let i = 0; i < 5; i++) {
     const before = s;
-    // тройные backticks + опциональный язык: ```text\nmodel\n``` → model
+    // 三重反引号 + 可选语言：```text\nmodel\n``` → model
     s = s.replace(/^```[a-zA-Z0-9_+\-]*\s*\n?([\s\S]*?)\n?```$/m, "$1").trim();
-    // одиночные backtick: `model` → model
+    // 单个反引号：`model` → model
     s = s.replace(/^`+([^`]+?)`+$/m, "$1").trim();
-    // ёлочки / прямые кавычки вокруг
+    // 书名号 / 直引号包围
     s = s.replace(/^["'«»“”„`]+|["'«»“”„`]+$/g, "").trim();
-    // markdown-выделение: **model**, *model*, _model_
+    // markdown高亮：**model**、*model*、_model_
     s = s.replace(/^(\*\*|__|\*|_)([\s\S]+?)\1$/m, "$2").trim();
     if (s === before) break;
   }
-  // Если внутри остался незакрытый ```` маркер (typical: "gpt-5.5\n```") — отсекаем хвост от него.
+  // 如果内部留有未闭合的 ``` 标记（典型："gpt-5.5\n```"）——截断其后的内容。
   const fenceIdx = s.indexOf("```");
   if (fenceIdx >= 0) s = s.slice(0, fenceIdx).trim();
-  // Снимаем мусорные хвостовые символы пунктуации (но НЕ . / - которые валидны в model id).
+  // 移除尾部的标点符号垃圾（但不移除在模型ID中有效的 . / -）。
   s = s.replace(/[,;:!?()\[\]{}<>«»"'`]+$/g, "").trim();
   return s;
 }
 
 /**
- * Снимаем мета-комментарии вида "(реакция на сообщение: 😂)" / "*ставит реакцию X*" / "редактирую: ..."
- * которые LLM иногда пишет вместо настоящего действия. Эти leak-фразы не должны попадать юзеру.
+ * 移除类似"（对消息的反应：😂）"/"*做出X反应*"/"编辑：..."的元评论，
+ * LLM有时会用这些代替实际操作。这些泄露短语不应发送给用户。
  */
 function stripActionLeakNarration(text: string): string {
   return text
-    // (реакция: ...) / (реакция на сообщение: ...) / (reaction: ...)
-    .replace(/\((?:реакц[а-я]*|реакция на сообщение|reaction)[^)]*\)/gi, "")
-    // *ставит реакцию X* / *реагирует X* / *ставит лайк*
-    .replace(/\*[^*\n]*(?:реакц|реагир|лайк|like|kiss)[^*\n]*\*/gi, "")
-    // "ставит реакцию: 😂" / "ставит реакцию 😂" — без обёрток
-    .replace(/(?:^|\s)ставит\s+реакц[а-я]+\s*[:\-]?\s*\S+/gi, " ")
-    // редактирую/исправляю: ... в начале строки
-    .replace(/^(?:редактирую|исправляю|edit|edited)\s*:[^\n]*/gim, "")
+    // （反应：...）/（对消息的反应：...）/（reaction：...）
+    .replace(/\((?:反应|对消息的反应|reaction)[^)]*\)/gi, "")
+    // *做出X反应* / *对X做出反应* / *点赞*
+    .replace(/\*[^*\n]*(?:反应|回应|点赞|like|kiss)[^*\n]*\*/gi, "")
+    // "做出反应：😂" / "做出反应 😂" ——无包装
+    .replace(/(?:^|\s)做出\s+反应\s*[:\-]?\s*\S+/gi, " ")
+    // 编辑/修正：...开头
+    .replace(/^(?:编辑|修正|edit|edited)\s*:[^\n]*/gim, "")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
@@ -79,9 +79,9 @@ export function sanitizeModelReply(reply: string): string {
       .replace(/\s*<!--[\s\S]*?-->\s*/g, "")
       .replace(/\s*‹!?--[\s\S]*?--›\s*/g, "")
       .replace(/\b(system|developer|assistant|user)\s*:/gi, "")
-      .replace(/как (?:искусственный интеллект|ии|ai)[^\n.]*/gi, "")
+      .replace(/作为(?:人工智能|ai)[^\n.]*/gi, "")
       .replace(CJK_RE, "")
-      .replace(LATIN_JOINED_TO_CYRILLIC_RE, "")
+      .replace(LATIN_JOINED_TO_CJK_RE, "")
       .replace(/[ \t]{2,}/g, " ")
   ).trim();
   if (!cleaned || TECHNICAL_ERROR_RE.test(cleaned)) return "";

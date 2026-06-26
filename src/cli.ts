@@ -19,43 +19,43 @@ import { communicationProfileLabel, deriveLegacyVibe, findCommunicationPreset, n
 
 const nodeMajor = Number(process.versions.node.split(".")[0] ?? 0);
 if (nodeMajor < 18) {
-  process.stderr.write(`[girl-agent] Node.js ${process.version} не поддерживается. Нужен Node.js 18.18+; в Termux: pkg install nodejs\n`);
+  process.stderr.write(`[girl-agent] Node.js ${process.version} 不受支持。需要 Node.js 18.18+；Termux 中：pkg install nodejs\n`);
   process.exit(1);
 }
 if (nodeMajor < 20) {
-  process.stderr.write(`[girl-agent] предупреждение: Node.js ${process.version}; рекомендуется 20/22, но продолжаю запуск.\n`);
+  process.stderr.write(`[girl-agent] 警告：Node.js ${process.version}；建议使用 20/22，但继续启动。\n`);
 }
 
 const HELP = `
-girl-agent — AI girl for Telegram (WebUI)
+girl-agent — Telegram 的 AI 女友 (WebUI)
 
-usage:
-  npx girl-agent                       # запустить WebUI и открыть http://localhost:3000
-  npx girl-agent --port=8080           # кастомный порт
-  npx girl-agent --host=0.0.0.0        # слушать на всех интерфейсах
-  GIRL_AGENT_PUBLIC_URL=https://example.com npx girl-agent  # URL для reverse proxy/docker
-  npx girl-agent --no-browser          # не открывать браузер автоматически
-  npx girl-agent --profile=<slug>      # запустить WebUI и сразу запустить указанный профиль
+用法：
+  npx girl-agent                       # 启动 WebUI 并打开 http://localhost:3000
+  npx girl-agent --port=8080           # 自定义端口
+  npx girl-agent --host=0.0.0.0        # 监听所有网络接口
+  GIRL_AGENT_PUBLIC_URL=https://example.com npx girl-agent  # 反向代理/docker 的 URL
+  npx girl-agent --no-browser          # 不自动打开浏览器
+  npx girl-agent --profile=<slug>      # 启动 WebUI 并立即启动指定配置文件
 
-server (для систем без TTY: docker / systemd / cron / CI):
+server（适用于无 TTY 的系统：docker / systemd / cron / CI）：
   npx girl-agent server --print-config > bot.json
   npx girl-agent server --config bot.json --headless
   npx girl-agent server --print-systemd | --print-docker | --list
 
-headless (для desktop-rs обвязки):
+headless（用于 desktop-rs 包装器）：
   npx girl-agent --profile=<slug> --json-events
   npx girl-agent --profile=<slug> --headless
 
-установка одной командой (без node на машине):
+一键安装（机器上无需 node）：
   curl -fsSL https://raw.githubusercontent.com/TheSashaDev/girl-agent/main/scripts/install.sh | sh
 
-быстрые команды:
-  --list                       показать профили и data dir
+快捷命令：
+  --list                       显示配置文件和数据目录
   --set-model --profile=<slug> --api-preset=<id> --model=<m> [--api-key=<k>]
   --delete-profile --profile=<slug> --yes
-  update [--verbose]           применить data-миграции
-  addon pack <folder> [output] собрать папку аддона в .gaa файл
-  addon init <folder>          создать шаблон аддона
+  update [--verbose]           应用数据迁移
+  addon pack <folder> [output] 将插件文件夹打包为 .gaa 文件
+  addon init <folder>          创建插件模板
   --help
 `;
 
@@ -96,29 +96,29 @@ async function main(): Promise<void> {
 
   if (argv.help) { process.stdout.write(HELP); return; }
 
-  // Quick CLI utilities (без поднятия WebUI)
+  // Quick CLI utilities（不启动 WebUI）
   if (argv.list) {
     const list = await listProfiles();
-    process.stdout.write(list.length ? list.join("\n") + "\n" : "(нет профилей)\n");
+    process.stdout.write(list.length ? list.join("\n") + "\n" : "(无配置文件)\n");
     process.stdout.write(`data: ${DATA_ROOT}\n`);
     return;
   }
 
   if (argv["delete-profile"]) {
     const slug = typeof argv.profile === "string" ? argv.profile : undefined;
-    if (!slug) { process.stderr.write("--delete-profile требует --profile=<slug>\n"); process.exit(1); }
+    if (!slug) { process.stderr.write("--delete-profile 需要 --profile=<slug>\n"); process.exit(1); }
     if (!argv.yes) {
-      process.stderr.write(`профиль НЕ удалён: добавь --yes для подтверждения.\nбудет удалено: ${DATA_ROOT}/${slug}\n`);
+      process.stderr.write(`配置文件未删除：添加 --yes 确认。\n将删除：${DATA_ROOT}/${slug}\n`);
       process.exit(1);
     }
     await deleteProfile(slug);
-    process.stdout.write(`профиль удалён: ${slug}\n`);
+    process.stdout.write(`配置文件已删除：${slug}\n`);
     return;
   }
 
   if (argv["set-model"]) {
     const slug = typeof argv.profile === "string" ? argv.profile : undefined;
-    if (!slug) { process.stderr.write("--set-model требует --profile=<slug>\n"); process.exit(1); }
+    if (!slug) { process.stderr.write("--set-model 需要 --profile=<slug>\n"); process.exit(1); }
     const cfg = await readConfig(slug);
     if (!cfg) { process.stderr.write(`profile not found: ${slug}\n`); process.exit(1); }
     const changed = applyLLMUpdate(cfg, {
@@ -129,15 +129,15 @@ async function main(): Promise<void> {
       proto: argv.proto === "anthropic" ? "anthropic" : argv.proto === "openai" ? "openai" : undefined
     });
     await writeConfig(cfg);
-    process.stdout.write((changed.length ? changed.map(x => `- ${x}`).join("\n") : "ничего не изменилось") + "\n\n" + describeLLM(cfg) + "\n");
+    process.stdout.write((changed.length ? changed.map(x => `- ${x}`).join("\n") : "未做任何更改") + "\n\n" + describeLLM(cfg) + "\n");
     return;
   }
 
-  // Headless / json-events: не поднимаем WebUI, запускаем runtime в pipe-режиме (для desktop-rs)
+  // Headless / json-events：不启动 WebUI，以管道模式运行 runtime（用于 desktop-rs）
   const jsonEvents = !!(argv["json-events"] || argv.headless);
   if (jsonEvents) {
     const slug = typeof argv.profile === "string" ? argv.profile : undefined;
-    if (!slug) { process.stderr.write("headless mode требует --profile=<slug>\n"); process.exit(1); }
+    if (!slug) { process.stderr.write("headless 模式需要 --profile=<slug>\n"); process.exit(1); }
     const cfg = await readConfig(slug);
     if (!cfg) { process.stderr.write(`profile not found: ${slug}\n`); process.exit(1); }
     if (await checkForPendingMigrations()) {
@@ -160,7 +160,7 @@ async function main(): Promise<void> {
   if (haveEnoughForFlags) {
     const cfg = await buildConfigFromFlags(argv as Record<string, unknown>);
     await writeConfig(cfg);
-    process.stdout.write(`профиль: ${cfg.name}, ${cfg.age}, ${cfg.nationality}, ${cfg.tz}\nгенерируем persona.md / speech.md / communication.md...\n`);
+    process.stdout.write(`配置文件：${cfg.name}，${cfg.age}，${cfg.nationality}，${cfg.tz}\n正在生成 persona.md / speech.md / communication.md...\n`);
     const llm = makeLLM(cfg.llm);
     const generated = await generatePersonaPack(llm, cfg.slug, cfg.name, cfg.age, cfg.nationality, personaNotesForGeneration(cfg));
     cfg.busySchedule = generated.busySchedule;
@@ -178,29 +178,29 @@ async function main(): Promise<void> {
     noBrowser: !!argv["no-browser"]
   });
 
-  process.stdout.write(`\n  🌐 girl-agent WebUI запущен\n`);
+  process.stdout.write(`\n  🌐 girl-agent WebUI 已启动\n`);
   process.stdout.write(`     1) ${instance.urls.loopback}\n`);
   process.stdout.write(`     2) ${instance.urls.localhost}\n`);
   process.stdout.write(`     3) ${instance.urls.public}\n`);
   if (isTermuxRuntime()) {
-    process.stdout.write(`\n  Termux: открой ссылку 1 или 2 в браузере телефона.\n`);
-    process.stdout.write(`  Если открываешь с ПК в той же Wi-Fi сети: girl-agent --host=0.0.0.0\n`);
+    process.stdout.write(`\n  Termux：在手机浏览器中打开链接 1 或 2。\n`);
+    process.stdout.write(`  如果从同一 Wi-Fi 网络的 PC 打开：girl-agent --host=0.0.0.0\n`);
   }
   process.stdout.write(`\n  REST API:        ${instance.urls.loopback}/api/system/health\n`);
   process.stdout.write(`  WebSocket logs:  ws://127.0.0.1:${port}/ws/logs/<slug>\n`);
-  process.stdout.write(`  Ctrl+C для остановки\n\n`);
+  process.stdout.write(`  Ctrl+C 停止\n\n`);
 
-  // Авто-старт указанного профиля
+  // 自动启动指定的配置文件
   if (typeof argv.profile === "string") {
     try {
       const cfg = await readConfig(argv.profile);
       if (cfg) {
         const { bus } = await import("./webui/runtime-bus.js");
         await bus.startWithConfig(cfg);
-        process.stdout.write(`  ▶ профиль ${cfg.name} (${cfg.slug}) запущен\n`);
+        process.stdout.write(`  ▶ 配置文件 ${cfg.name} (${cfg.slug}) 已启动\n`);
       }
     } catch (e) {
-      process.stderr.write(`не удалось автостарт профиль: ${(e as Error)?.message}\n`);
+      process.stderr.write(`无法自动启动配置文件：${(e as Error)?.message}\n`);
     }
   }
 
@@ -210,7 +210,7 @@ async function main(): Promise<void> {
 
   // Hold process; stop on SIGINT/SIGTERM
   const shutdown = async () => {
-    process.stdout.write("\n[girl-agent] остановка...\n");
+    process.stdout.write("\n[girl-agent] 正在停止...\n");
     try { await instance.stop(); } catch { /* ignore */ }
     process.exit(0);
   };
@@ -223,16 +223,16 @@ async function main(): Promise<void> {
 
 async function runUpdate(verbose: boolean): Promise<void> {
   const profiles = await listProfiles();
-  if (!profiles.length) { process.stdout.write("нет профилей — нечего обновлять.\n"); return; }
-  process.stdout.write(`найдено профилей: ${profiles.length}\nзапуск миграций...\n`);
+  if (!profiles.length) { process.stdout.write("无配置文件 — 无需更新。\n"); return; }
+  process.stdout.write(`找到 ${profiles.length} 个配置文件\n正在运行迁移...\n`);
   const result = await runMigrations({ verbose });
   if (!result.migrationsApplied.length) {
-    process.stdout.write("все данные актуальны, миграции не нужны.\n");
+    process.stdout.write("所有数据已是最新，无需迁移。\n");
     return;
   }
-  process.stdout.write(`\nготово: миграций ${result.migrationsApplied.length}, профилей ${result.profilesUpdated}\n`);
+  process.stdout.write(`\n完成：${result.migrationsApplied.length} 次迁移，${result.profilesUpdated} 个配置文件\n`);
   if (result.errors.length) {
-    process.stdout.write(`ошибок: ${result.errors.length}\n`);
+    process.stdout.write(`错误：${result.errors.length}\n`);
     for (const e of result.errors) process.stdout.write(`  ${e.profile} @ ${e.migration}: ${e.error}\n`);
   }
 }
@@ -286,7 +286,7 @@ async function buildConfigFromFlags(argv: Record<string, unknown>): Promise<Prof
 function slugifyLocal(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-zа-я0-9]+/gi, "-")
+    .replace(/[^a-z0-9\u4e00-\u9fff]+/gi, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 40) || `profile-${Date.now().toString(36)}`;
 }
@@ -297,20 +297,20 @@ async function runAddonCommand(args: string[]): Promise<void> {
   if (sub === "pack") {
     const folder = args[1];
     if (!folder) {
-      process.stderr.write("Использование: npx girl-agent addon pack <folder> [output.gaa]\n");
+      process.stderr.write("用法：npx girl-agent addon pack <folder> [output.gaa]\n");
       process.exit(1);
     }
     const { packGaa } = await import("./webui/addons.js");
     const output = args[2] ?? undefined;
     const result = await packGaa(folder, output);
-    process.stdout.write(`Создан: ${result}\n`);
+    process.stdout.write(`已创建：${result}\n`);
     return;
   }
 
   if (sub === "init") {
     const folder = args[1];
     if (!folder) {
-      process.stderr.write("Использование: npx girl-agent addon init <folder>\n");
+      process.stderr.write("用法：npx girl-agent addon init <folder>\n");
       process.exit(1);
     }
     const { promises: initFs } = await import("node:fs");
@@ -321,36 +321,36 @@ async function runAddonCommand(args: string[]): Promise<void> {
     const manifest = {
       id: name,
       name,
-      description: "Описание аддона",
+      description: "插件描述",
       version: "1.0.0",
       author: "",
       tags: [],
       settings: []
     };
     await initFs.writeFile(initPath.default.join(dir, "manifest.json"), JSON.stringify(manifest, null, 2), "utf8");
-    await initFs.writeFile(initPath.default.join(dir, "README.md"), `# ${name}\n\nОписание аддона.\n`, "utf8");
+    await initFs.writeFile(initPath.default.join(dir, "README.md"), `# ${name}\n\n插件描述。\n`, "utf8");
     await initFs.writeFile(
       initPath.default.join(dir, "config.patch.json"),
-      JSON.stringify({ "_comment": "Поля для мёрджа в config.json профиля" }, null, 2),
+      JSON.stringify({ "_comment": "用于合并到配置文件 config.json 的字段" }, null, 2),
       "utf8"
     );
-    process.stdout.write(`Шаблон аддона создан: ${dir}\n`);
-    process.stdout.write(`  manifest.json  — метаданные\n`);
-    process.stdout.write(`  files/         — файлы для копирования в профиль\n`);
+    process.stdout.write(`插件模板已创建：${dir}\n`);
+    process.stdout.write(`  manifest.json  — 元数据\n`);
+    process.stdout.write(`  files/         — 要复制到配置文件的文件\n`);
     process.stdout.write(`  config.patch.json — config overrides\n`);
-    process.stdout.write(`  README.md      — документация\n\n`);
-    process.stdout.write(`Упаковать: npx girl-agent addon pack ${folder}\n`);
+    process.stdout.write(`  README.md      — 文档\n\n`);
+    process.stdout.write(`打包：npx girl-agent addon pack ${folder}\n`);
     return;
   }
 
-  process.stderr.write("Команды:\n  addon pack <folder> [output.gaa]  — собрать .gaa\n  addon init <folder>              — создать шаблон\n");
+  process.stderr.write("命令：\n  addon pack <folder> [output.gaa]  — 构建 .gaa\n  addon init <folder>              — 创建模板\n");
   process.exit(1);
 }
 
 function personaNotesForGeneration(cfg: ProfileConfig): string {
   const parts = [
     cfg.personaNotes?.trim(),
-    `Тон общения: ${communicationProfileLabel(normalizeCommunicationProfile(cfg))}. Учти это при speech.md и communication.md.`
+    `沟通语气：${communicationProfileLabel(normalizeCommunicationProfile(cfg))}。在 speech.md 和 communication.md 中体现这一点。`
   ].filter(Boolean);
   return parts.join("\n\n");
 }
@@ -363,7 +363,7 @@ async function tryOpenBrowser(url: string): Promise<void> {
   else if (platform === "win32") cmd = `start "" "${url}"`;
   else if (isTermuxRuntime()) cmd = `command -v termux-open-url >/dev/null 2>&1 && termux-open-url "${url}" || true`;
   else cmd = `xdg-open "${url}" >/dev/null 2>&1 || true`;
-  childExec(cmd, () => { /* ignore — браузер опционален */ });
+  childExec(cmd, () => { /* 忽略 — 浏览器为可选 */ });
 }
 
 function isTermuxRuntime(): boolean {

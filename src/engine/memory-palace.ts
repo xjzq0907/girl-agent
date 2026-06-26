@@ -56,9 +56,9 @@ export interface MemoryPalaceContext {
 type ParsedMemoryDrawer = Omit<MemoryDrawer, "id" | "ts" | "wing" | "source">;
 
 const DEFAULT_FACTS = `# facts
-- имя основного собеседника неизвестно
-- важные факты о нём записывать только если он сам сказал явно
-- спорные факты держать как uncertain, не утверждать уверенно`;
+- 主要对话者的名字未知
+- 关于他的重要事实，只有在他明确亲口说出时才记录
+- 有争议的事实保留为 uncertain，不要武断地断言`;
 
 const DEFAULT_ATTACHMENT = `# attachment
 attachment: anxious-avoidant
@@ -70,22 +70,22 @@ flirtStyle: teasing_then_soft
 apologyStyle: awkward_short`;
 
 const DEFAULT_WEEKLY = `# week-plan
-будни: учёба/работа, дорога, вечером телефон/сериал/подруга/дом
-выходные: поздно просыпается, бытовые дела, иногда встречается с подругой
-не каждый день доступна; иногда занята, устала или просто не хочет отвечать`;
+工作日：学习/工作、通勤，晚上刷手机/看剧/闺蜜/宅家
+周末：睡懒觉，处理琐事，偶尔和闺蜜见面
+不是每天都有空；有时忙、累了，或者就是不想回`;
 
 const DEFAULT_SOCIAL = `# contacts
-- мама: бытовые конфликты, контроль, иногда забота
-- лера: подруга, язвит, зовёт гулять
-- настя: подруга поспокойнее, может слушать голосовые
-- одногруппники/коллеги: фон, не романтика`;
+- 妈妈：生活摩擦、控制欲，偶尔也会关心
+- 莉拉：闺蜜，嘴毒，爱约出去逛街
+- 娜斯佳：性格更稳一点的闺蜜，会听语音
+- 同学/同事：背景板，不是感情线`;
 
 const DEFAULT_HABITS = `# habits
-- утром отвечает суше
-- вечером теплее, если день не выбесил
-- когда устала, читает и откладывает ответ
-- редко объясняет почему пропала
-- может вспомнить мелкую деталь через день, если она эмоционально зацепила`;
+- 早上回复比较冷淡
+- 晚上更温柔，前提是一天没被惹毛
+- 累了会已读，然后拖着不回
+- 很少解释自己为什么消失
+- 如果某个细节情绪上戳中她，可能隔天还会想起来`;
 
 const HALLS: readonly MemoryHall[] = [
   "hall_facts",
@@ -100,13 +100,13 @@ const HALLS: readonly MemoryHall[] = [
 ];
 
 const STOP_WORDS = new Set([
-  "это", "как", "что", "или", "если", "она", "они", "его", "ему", "тебя", "тебе", "меня", "мне",
-  "для", "про", "над", "под", "при", "без", "еще", "ещё", "уже", "там", "тут", "тоже", "после",
-  "сейчас", "щас", "когда", "почему", "потому", "очень", "просто", "вообще", "короче", "типа"
+  "这个", "怎么", "什么", "或者", "如果", "她", "他们", "他的", "他", "你", "我", "为了",
+  "关于", "上面", "下面", "当时", "没有", "还", "已经", "那里", "这里", "也", "之后", "现在",
+  "什么时候", "为什么", "因为", "很", "只是", "根本", "简单说", "类似"
 ]);
 
 function wordsFrom(text: string): string[] {
-  return [...text.toLowerCase().matchAll(/[a-zа-яё0-9]{3,}/gi)]
+  return [...text.toLowerCase().matchAll(/[a-zA-Z0-9]{3,}|[\u4e00-\u9fa5]{2,}/gi)]
     .map(match => match[0])
     .filter(token => !STOP_WORDS.has(token));
 }
@@ -130,8 +130,7 @@ function wingFor(cfg: ProfileConfig): string {
 function normalizeRoom(value: string): string {
   const source = value.trim().toLowerCase() || "general";
   const slug = source
-    .replace(/ё/g, "е")
-    .replace(/[^a-zа-я0-9]+/gi, "-")
+    .replace(/[^a-zA-Z0-9\u4e00-\u9fa5]+/gi, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
   return slug || "general";
@@ -143,7 +142,7 @@ function normalizeHall(value: string): MemoryHall {
 
 function normalizeKeywords(value: unknown, quote: string, room: string): string[] {
   const raw = Array.isArray(value) ? value.filter((x): x is string => typeof x === "string") : [];
-  const fallback = [...quote.toLowerCase().matchAll(/[a-zа-яё0-9]{3,}/gi)]
+  const fallback = [...quote.toLowerCase().matchAll(/[a-zA-Z0-9]{3,}|[\u4e00-\u9fa5]{2,}/gi)]
     .map(match => match[0])
     .filter(word => !STOP_WORDS.has(word))
     .slice(0, 10);
@@ -250,7 +249,7 @@ function parsedDrawers(value: unknown): ParsedMemoryDrawer[] {
 async function ensureDefaults(cfg: ProfileConfig): Promise<void> {
   const defaults: [string, string][] = [
     ["memory/facts.md", DEFAULT_FACTS],
-    ["relationship/timeline.md", `# relationship timeline\n- ${nowStamp()}: профиль создан, стадия ${cfg.stage}`],
+    ["relationship/timeline.md", `# relationship timeline\n- ${nowStamp()}: 档案已创建，阶段 ${cfg.stage}`],
     ["life/week-plan.md", DEFAULT_WEEKLY],
     ["life/contacts.md", DEFAULT_SOCIAL],
     ["life/habits.md", DEFAULT_HABITS],
@@ -324,14 +323,14 @@ function renderPalaceRecall(drawers: MemoryDrawer[]): string {
     const key = `${drawer.hall}/${drawer.room}`;
     grouped.set(key, [...(grouped.get(key) ?? []), drawer]);
   }
-  const lines = ["## Memory Palace: точные ящики по теме"];
+  const lines = ["## Memory Palace: 按主题的精确抽屉"];
   for (const [key, group] of grouped) {
     lines.push(`### ${key}`);
     for (const drawer of group.slice(0, 4)) {
       lines.push(`- [${drawer.ts.slice(0, 10)}] ${drawer.quote}`);
     }
   }
-  lines.push("Используй эти ящики как точную память. Не цитируй служебные hall/room/source, не говори что это файл или память.");
+  lines.push("把这些抽屉当作精确记忆。不要引用 hall/room/source 这些系统字段，也不要说它是文件或记忆。");
   return lines.join("\n");
 }
 
@@ -381,18 +380,18 @@ export async function loadMemoryPalaceContext(cfg: ProfileConfig, incoming?: str
 
 export function memoryPalacePromptFragment(ctx: MemoryPalaceContext): string {
   return [
-    "# Реалистичная непрерывность",
-    "Используй эти данные как фон, а не как отчёт. Не говори, что у тебя есть память, файлы, факты или система.",
-    "Если точного факта нет — не выдумывай уверенно; отвечай уклончиво или уточняй по-человечески.",
+    "# 真实的连续性",
+    "把这些数据当作背景，而不是报告。不要说你拥有记忆、文件、事实或系统。",
+    "如果没有确切事实——不要自信地编造；用含糊或人性化的方式回应、追问。",
     ctx.palace,
-    "## Факты о нём", ctx.facts,
-    "## Эпизоды текущего дня", ctx.episodes || "пока нет ярких эпизодов",
-    "## История отношений", ctx.relationshipTimeline,
-    "## Привязанность и характер", ctx.attachment,
-    "## Время, обещания, открытые петли", ctx.time || "нет открытых петель",
-    "## Недельная жизнь", ctx.weeklyLife,
-    "## Социальный круг", ctx.socialGraph,
-    "## Привычки", ctx.habits
+    "## 关于他的事实", ctx.facts,
+    "## 今日片段", ctx.episodes || "还没有亮眼的片段",
+    "## 关系史", ctx.relationshipTimeline,
+    "## 依恋与性格", ctx.attachment,
+    "## 时间、承诺、未完成的事", ctx.time || "没有未完成的事",
+    "## 一周生活", ctx.weeklyLife,
+    "## 社交圈", ctx.socialGraph,
+    "## 习惯", ctx.habits
   ].filter(Boolean).join("\n\n");
 }
 
@@ -453,30 +452,30 @@ export async function recordInteractionMemory(llm: LLMClient, cfg: ProfileConfig
     {
       role: "system",
       content: scope === "acquaintance"
-        ? `Ты извлекаешь кросс-чатовую память о стороннем Telegram-собеседнике. Нужны только безопасные базовые факты: кто писал, общий тон, явные неинтимные факты, странное/опасное поведение. НЕЛЬЗЯ сохранять секреты, адреса, документы, интим, токены, контакты, дословные длинные цитаты. Пиши кратко и обобщённо.`
-        : `Ты извлекаешь память для Telegram-персоны. Принцип MemPalace: сохранять оригинальные формулировки дословно, не пересказывать и не сжимать. Нужны только явные факты, предпочтения, обещания, открытые петли, эмоциональные эпизоды и сомнительные факты. Если важна целая фраза — сохрани её целиком без обрезки ни одного слова. Не выдумывай.`
+        ? `你正在为第三方 Telegram 对话者提取跨聊天记忆。只需要安全的基础事实：谁在说话、整体语气、明确的非私密事实、异常/危险行为。禁止保存秘密、地址、文件、私密内容、令牌、联系方式、逐字长引用。写得简短且概括。`
+        : `你正在为 Telegram 虚拟女友提取记忆。MemPalace 原则：逐字保留原始表述，不要复述，不要压缩。只需要明确的事实、偏好、承诺、未完成的事、情绪片段和存疑事实。如果整句话很重要——完整保存，不要删任何一个字。不要编造。`
     },
     {
       role: "user",
-      content: `Профиль: ${cfg.name}, стадия ${cfg.stage}.
-Он написал:
+      content: `档案：${cfg.name}，阶段 ${cfg.stage}。
+他发了：
 """
 ${safeIncoming}
 """
 
-Она ответила:
+她回了：
 """
 ${safeReply}
 """
 
-Верни STRICT JSON:
+返回 STRICT JSON:
 {
   "drawers": [
     {
-      "room": "короткая тема на русском или latin-slug",
+      "room": "简短主题，中文或 latin-slug",
       "hall": "hall_facts | hall_events | hall_discoveries | hall_preferences | hall_advice | hall_promises | hall_open_loops | hall_feelings | hall_uncertain",
-      "quote": "дословная фраза/фрагмент из переписки, без пересказа и без обрезки важных слов",
-      "keywords": ["слова для поиска"],
+      "quote": "对话中的逐字短语/片段，不要复述，不要删掉重要词",
+      "keywords": ["搜索关键词"],
       "salience": 1-10
     }
   ]
@@ -507,24 +506,24 @@ export async function mineDailyLogToPalace(llm: LLMClient, cfg: ProfileConfig, d
     const raw = await llm.chat([
       {
         role: "system",
-        content: `Ты майнишь дневной лог переписки в Memory Palace. Сохраняй максимум фактов и формулировок дословно. Не суммаризируй вместо quote: quote должен быть оригинальным фрагментом лога. Можно много drawers, но каждый — отдельный атом памяти.`
+        content: `你正在把一天的聊天记录挖掘进 Memory Palace。尽量保留事实和逐字表述。不要 summarizing 替代 quote：quote 必须是日志的原始片段。可以有很多 drawers，但每个都是独立的记忆原子。`
       },
       {
         role: "user",
-        content: `День: ${day}. Профиль: ${cfg.name}, стадия ${cfg.stage}.
-Часть ${i + 1}/${chunks.length}. Лог:
+        content: `日期：${day}。档案：${cfg.name}，阶段 ${cfg.stage}。
+第 ${i + 1}/${chunks.length} 部分。日志：
 """
 ${chunks[i] ?? ""}
 """
 
-Верни STRICT JSON:
+返回 STRICT JSON:
 {
   "drawers": [
     {
-      "room": "тема",
+      "room": "主题",
       "hall": "hall_facts | hall_events | hall_discoveries | hall_preferences | hall_advice | hall_promises | hall_open_loops | hall_feelings | hall_uncertain",
-      "quote": "дословный фрагмент лога без обрезки важных слов",
-      "keywords": ["поиск"],
+      "quote": "日志的逐字片段，不要删掉重要词",
+      "keywords": ["搜索关键词"],
       "salience": 1-10
     }
   ]

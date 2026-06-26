@@ -36,9 +36,9 @@ export interface LLMPreset {
   recommended?: boolean;
   /** Preset supports OAuth login as alternative to API key */
   oauth?: boolean;
-  /** Provider временно недоступен — отображаем в списке как readonly. */
+  /** Provider 暂时不可用 — 在列表中显示为只读。 */
   disabled?: boolean;
-  /** Причина дизейбла (показывается в UI). */
+  /** 禁用原因（在 UI 中显示）。 */
   disabledReason?: string;
 }
 
@@ -141,26 +141,26 @@ export interface ProfileConfig {
     apiHash?: string;
     sessionString?: string;
     phone?: string;
-    /** Использовать WebSocket через порт 443 вместо TCP на порту 80. Обходит блокировки РФ. По умолчанию true (auto). */
+    /** 使用 WebSocket 通过端口 443 替代 TCP 端口 80。绕过 RF 封锁。默认 true（auto）。 */
     useWSS?: boolean;
     /** SOCKS proxy for MTProto userbot mode and Bot API mode. */
     proxy?: TelegramProxyConfig;
-    /** Настройки Bot API: кастомный endpoint/реверс-прокси. */
+    /** Bot API 设置：自定义 endpoint/反向代理。 */
     botApi?: BotApiConfig;
   };
-  /** @deprecated MCP настройки скрыты из UI; внешние расширения ставятся через addons. */
+  /** @deprecated MCP 设置已从 UI 隐藏；外部扩展通过 addons 安装。 */
   mcp?: { id: string; secrets: Record<string, string> }[];
   ownerId?: number; // tg user id of the human (set on first message in practice / fallback)
   privacy?: PrivacyMode;
   createdAt: string;
-  /** Часы сна (0-23). sleepFrom — когда ложится, sleepTo — когда просыпается. Может пересекать полночь. */
+  /** 睡眠时间（0-23）。sleepFrom — 入睡时间，sleepTo — 醒来时间。可以跨过午夜。 */
   sleepFrom: number;
   sleepTo: number;
-  /** Вероятность 0..1 что она проснётся ночью на входящее сообщение (без :wake) */
+  /** 概率 0..1，表示她会在夜间因收到消息而醒来（无需 :wake） */
   nightWakeChance: number;
-  /** Склонность к игнору 0..100. Не прямой рандом: используется как вес в behavior-layer. */
+  /** 忽略倾向 0..100。非直接随机：在 behavior-layer 中用作权重。 */
   ignoreTendency?: number;
-  /** Стиль общения: "short" — реалистично-краткие ответы, чаще игнор; "warm" — развёрнутые, тёплые, придумывает истории, реже игнорит */
+  /** 沟通风格："short" — 真实简洁的回复，更容易忽略；"warm" — 详细、温暖、会编故事，较少忽略 */
   vibe?: "short" | "warm";
   communication?: CommunicationProfile;
   personaNotes?: string;
@@ -177,26 +177,26 @@ export interface RelationshipScore {
 
 export interface BehaviorTickResult {
   shouldReply: boolean;
-  shouldRead?: boolean;     // даже если не отвечает, прочитать и поставить галочки?
+  shouldRead?: boolean;     // 即使不回复，也读取并打上已读标记？
   delaySec: number;
   bubbles: number;          // how many message-pieces to split the reply into
   typing: boolean;
   ignoreReason?: string;
   moodDelta?: Partial<RelationshipScore>;
   intent: "reply" | "ignore" | "short" | "left-on-read" | "leave-chat" | "reaction-only";
-  /** Опциональная TG-реакция на его сообщение. Девушки 2026 чаще реагируют чем шлют эмодзи в тексте. Один символ. */
+  /** 可选的 TG 反应表情，用于回复他的消息。2026 年的女孩更倾向于使用反应而不是在文本中发送表情。单个字符。 */
   reaction?: string;
   /**
-   * ID сообщения в Telegram, на которое ставим реакцию.
-   * Девушки в TG иногда реагируют на более раннее сообщение, которое их зацепило.
+   * 要做出反应的 Telegram 消息 ID。
+   * TG 中的女孩有时会对更早吸引她们注意的消息做出反应。
    */
   reactionTargetMessageId?: number;
   /**
-   * Если выставлено — после отправки сообщения девушка решила его отредактировать.
-   * (редко и в основном при опечатках / выпавшем т 9 / изменении решения)
+   * 如果设置 — 在发送消息后，女孩决定编辑它。
+   * （很少发生，主要是拼写错误 / 误发送 / 改变主意）
    */
   selfEdit?: {
-    /** Номер сообщения из буля отправленных (0 = последнее, 1 = предпоследнее...). */
+    /** 已发送消息气泡中的消息序号（0 = 最后一条，1 = 倒数第二条...）。 */
     targetOffset: number;
     newText: string;
     reason?: string;
@@ -208,6 +208,6 @@ export type DeletionAwareness = "saw-and-read" | "saw-not-read" | "missed";
 export interface DeletedMessageContext {
   deletedText: string;
   awareness: DeletionAwareness;
-  /** Как давно (в секундах) было удалено. */
+  /** 删除多久了（以秒计）。 */
   ageSec: number;
 }

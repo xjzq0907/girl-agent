@@ -30,7 +30,7 @@ export function AuthGate({ children }: AuthGateProps) {
       setAuthorized(true);
       setPassword("");
     } catch (err) {
-      setError((err as Error)?.message ?? "Не удалось войти");
+      setError((err as Error)?.message ?? "登录失败");
     }
   }
 
@@ -46,14 +46,14 @@ export function AuthGate({ children }: AuthGateProps) {
     return (
       <div className="auth-shell">
         <form className="auth-card" onSubmit={submit}>
-          <h1 className="setup-title">Вход в WebUI</h1>
-          <p className="setup-subtitle">Введите пароль из GIRL_AGENT_WEBUI_PASSWORD.</p>
+          <h1 className="setup-title">WebUI 登录</h1>
+          <p className="setup-subtitle">请输入 GIRL_AGENT_WEBUI_PASSWORD 中的密码。</p>
           <div className="form-row">
-            <label>Пароль</label>
+            <label>密码</label>
             <input className="input" type="password" autoFocus value={password} onChange={e => setPassword(e.target.value)} />
           </div>
           {error && <div className="hint" style={{ color: "var(--accent)" }}>{error}</div>}
-          <button className="btn primary" type="submit" disabled={!password}>Войти</button>
+          <button className="btn primary" type="submit" disabled={!password}>登录</button>
         </form>
       </div>
     );

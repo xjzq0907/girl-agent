@@ -1,5 +1,5 @@
-// Длинные конфликты. Когда юзер реально достал / накосячил, она может уйти в офлайн на дни.
-// Хранится в data/<slug>/conflict.json. Влияет на behavior-tick (sets coldUntil → ignore).
+// 长期冲突。当用户真的惹恼 / 搞砸了她，她可能会离线数天。
+// 存储在 data/<slug>/conflict.json。影响 behavior-tick（设置 coldUntil → 忽略）。
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -7,15 +7,15 @@ import { profileDir, ensureProfile, appendMd } from "../storage/md.js";
 import type { RelationshipScore } from "../types.js";
 
 export interface ConflictState {
-  /** ISO время до которого она "молчит" — игнор, не отвечает. */
+  /** ISO 时间的“冷处理”截止点 — 忽略，不回复。 */
   coldUntil?: string;
-  /** Уровень: 0=нет, 1=обиделась на час, 2=обижена сутки, 3=серьёзный конфликт несколько дней, 4=на грани разрыва */
+  /** 等级：0=无，1=生气一小时，2=生气一天，3=严重冲突数天，4=濒临破裂 */
   level: 0 | 1 | 2 | 3 | 4;
-  /** Что именно её зацепило. Кратко. */
+  /** 具体触发了什么。简短。 */
   reason?: string;
-  /** ISO начала конфликта */
+  /** 冲突开始 ISO 时间 */
   since?: string;
-  /** Лог инцидентов */
+  /** 事件日志 */
   history: { ts: string; note: string; deltaLevel: number }[];
 }
 
@@ -34,13 +34,13 @@ export async function writeConflict(slug: string, c: ConflictState): Promise<voi
   await fs.writeFile(path.join(profileDir(slug), "conflict.json"), JSON.stringify(c, null, 2), "utf8");
 }
 
-/** Текущее состояние конфликта (с учётом истечения cold-периода) */
+/** 当前冲突状态（考虑 cold 期是否已过期） */
 export function activeConflict(c: ConflictState, now = new Date()): { active: boolean; coldActive: boolean } {
   const cold = c.coldUntil ? new Date(c.coldUntil).getTime() > now.getTime() : false;
   return { active: c.level > 0, coldActive: cold };
 }
 
-/** Решает по mood-delta + сообщению нужно ли поднять/опустить уровень конфликта */
+/** 根据 mood 增量 + 消息判断是否需要提升/降低冲突等级 */
 export function escalateFromMood(
   current: ConflictState,
   delta: Partial<RelationshipScore>,
@@ -56,14 +56,14 @@ export function escalateFromMood(
   let coldHours = 0;
   let bumpReason: string | undefined;
 
-  if (trigger >= 25 || score.annoyance > 70) { newLevel = Math.max(newLevel, 3) as ConflictState["level"]; coldHours = 24 + Math.random() * 24; bumpReason = "сильный негатив"; }
-  else if (trigger >= 15) { newLevel = Math.max(newLevel, 2) as ConflictState["level"]; coldHours = 4 + Math.random() * 12; bumpReason = "обижена"; }
-  else if (trigger >= 8) { newLevel = Math.max(newLevel, 1) as ConflictState["level"]; coldHours = 0.5 + Math.random() * 2; bumpReason = "немного дуется"; }
+  if (trigger >= 25 || score.annoyance > 70) { newLevel = Math.max(newLevel, 3) as ConflictState["level"]; coldHours = 24 + Math.random() * 24; bumpReason = "强烈负面"; }
+  else if (trigger >= 15) { newLevel = Math.max(newLevel, 2) as ConflictState["level"]; coldHours = 4 + Math.random() * 12; bumpReason = "生气了"; }
+  else if (trigger >= 8) { newLevel = Math.max(newLevel, 1) as ConflictState["level"]; coldHours = 0.5 + Math.random() * 2; bumpReason = "有点赌气"; }
 
   if (score.annoyance > 85 && score.cringe > 70 && score.interest < -30) {
     newLevel = 4;
     coldHours = Math.max(coldHours, 48 + Math.random() * 48);
-    bumpReason = "на грани разрыва";
+    bumpReason = "濒临破裂";
   }
 
   if (newLevel === current.level && newLevel === 0) return current;
@@ -75,7 +75,7 @@ export function escalateFromMood(
     next.reason = bumpReason ?? next.reason;
     if (coldHours > 0) {
       const until = new Date(Date.now() + coldHours * 3600_000);
-      // если уже есть более длинный cold — оставляем больший
+      // 如果已有更长的 cold — 保留更长的那个
       const existing = current.coldUntil ? new Date(current.coldUntil).getTime() : 0;
       next.coldUntil = until.getTime() > existing ? until.toISOString() : current.coldUntil;
     }
@@ -88,7 +88,7 @@ export function escalateFromMood(
   return next;
 }
 
-/** При очень милом сообщении — снижаем уровень конфликта (помириться) */
+/** 当消息非常可爱时 — 降低冲突等级（和解） */
 export function softenFromMood(
   current: ConflictState,
   delta: Partial<RelationshipScore>
@@ -104,7 +104,7 @@ export function softenFromMood(
     next.since = undefined;
     next.reason = undefined;
   } else if (next.coldUntil) {
-    // сократим cold вдвое
+    // 把 cold 时间减半
     const remaining = new Date(next.coldUntil).getTime() - Date.now();
     if (remaining > 0) next.coldUntil = new Date(Date.now() + remaining / 2).toISOString();
   }
@@ -120,31 +120,31 @@ export function conflictPromptFragment(c: ConflictState, now = new Date()): stri
   const { active, coldActive } = activeConflict(c, now);
   if (!active) return "";
   const lines: string[] = [
-    `# КОНФЛИКТ (level ${c.level})`,
-    `Причина: ${c.reason ?? "—"}. Идёт с ${c.since ?? "недавно"}.`
+    `# 冲突（等级 ${c.level}）`,
+    `原因：${c.reason ?? "—"}。开始于 ${c.since ?? "最近"}。`
   ];
   if (coldActive) {
     const until = c.coldUntil ? new Date(c.coldUntil) : null;
     const hoursLeft = until ? Math.max(0, Math.round((until.getTime() - now.getTime()) / 3600_000)) : 0;
-    lines.push(`Ты СЕЙЧАС в режиме молчания. Осталось ~${hoursLeft}ч игнора.`);
+    lines.push(`你现在处于冷战模式。还剩约 ${hoursLeft} 小时会忽略对方。`);
     if (c.level >= 3) {
-      lines.push(`На сообщения отвечай очень редко, сухо: ".", "и?", "ну?", "что". Никаких смайликов, скобок ")" нет вообще. Можно вообще игнорить.`);
+      lines.push(`对消息回复要极少、冷淡：如“。”、“嗯？”、“哦？”、“干嘛”。不准有任何表情符号、括号 ")" 等。可以直接无视。`);
     } else {
-      lines.push(`Отвечаешь сухо, односложно. Нет ")", нет "пхпх", никакого тепла.`);
+      lines.push(`回复冷淡、简短。不准有 ")"、不准“噗噗”，没有温度。`);
     }
-    lines.push(`Простить можешь только если ОН реально извинится по существу — не "ну прости" а реально объяснит. Тогда оттаешь медленно, не сразу.`);
+    lines.push(`只有在他真正实质性道歉时——不是“对不起啦”而是认真解释——你才能慢慢原谅，但不是立刻。`);
   } else {
-    lines.push(`Cold-период истёк, но осадочек остался. Будь сдержаннее обычного.`);
+    lines.push(`Cold 期已过，但仍有芥蒂。比平时更克制。`);
   }
   return lines.join("\n");
 }
 
-/** При reset чистим конфликт */
+/** reset 时清空冲突 */
 export async function clearConflict(slug: string): Promise<void> {
   await writeConflict(slug, { level: 0, history: [] });
 }
 
-/** Логируем конфликт в memory/long-term (для долгосрочного хендлинга после reset/ремонта) */
+/** 将冲突记录到 memory/long-term（用于 reset/修复后的长期处理） */
 export async function logConflictToMemory(slug: string, c: ConflictState): Promise<void> {
   if (c.level === 0 || !c.history.length) return;
   const last = c.history[c.history.length - 1];

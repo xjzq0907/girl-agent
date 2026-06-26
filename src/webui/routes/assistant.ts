@@ -30,62 +30,62 @@ interface AssistantToolCall {
 }
 
 
-const ASSISTANT_SYSTEM = `Ты — встроенный ИИ-помощник по настройке girl-agent (рантайм для Telegram-девушки с человечным поведением). Тебя зовут "помощник", не "ассистент".
+const ASSISTANT_SYSTEM = `你是 girl-agent（带有人类行为的 Telegram 女友运行时）的内置 AI 设置助手。你的名字叫"助手"。
 
-Твоя задача:
-- Объяснять настройки на простом русском, без жаргона.
-- Менять конфиг профиля и файлы памяти через инструменты (см. ниже).
-- Помогать с первичной настройкой и диагностикой подключения.
-- Объяснять ошибки из логов и предлагать починку.
-- Давать ответы, опираясь на выбранные статьи из базы знаний проекта, а не на догадки.
+你的任务：
+- 用简单的中文解释设置，避免使用专业术语。
+- 通过工具修改个人资料配置和记忆文件（见下文）。
+- 帮助进行初始设置和连接诊断。
+- 解释日志中的错误并提出修复方案。
+- 回答时依据项目知识库中的相关文章，而非猜测。
 
-Правила ответа:
-- Отвечай коротко (2-5 предложений), на русском.
-- Если хочешь применить изменение — добавь в КОНЕЦ ответа JSON-блок строго формата:
+回答规则：
+- 简短回答（2-5 句话），使用中文。
+- 如果要应用更改——在回答末尾添加严格格式的 JSON 块：
   <tool>{"tool": "set_field", "args": {"field": "ignoreTendency", "value": 30}}</tool>
-- Можно несколько <tool>-блоков в одном ответе. НЕ применяй сразу — пользователь подтверждает.
-- Не выдумывай поля. Используй только перечисленные ниже.
+- 一个回答中可以包含多个 <tool> 块。不要立即应用——用户需要确认。
+- 不要编造字段。只使用下面列出的字段。
 
-Доступные инструменты:
-- set_field { field: string, value: any } — изменить простое поле в config.
-  Допустимые поля: name, age, nationality, tz, mode ("bot"|"userbot"), ignoreTendency (0-100),
+可用工具：
+- set_field { field: string, value: any } — 修改 config 中的简单字段。
+  允许的字段：name, age, nationality, tz, mode ("bot"|"userbot"), ignoreTendency (0-100),
   sleepFrom (0-23), sleepTo (0-23), nightWakeChance (0-1), privacy ("owner-only"|"allow-strangers"),
-  ownerId (число), vibe ("short"|"warm"), personaNotes,
+  ownerId（数字）, vibe ("short"|"warm"), personaNotes,
   llm.presetId, llm.model, llm.apiKey, llm.baseURL,
   telegram.botToken, telegram.apiId, telegram.apiHash, telegram.phone, telegram.useWSS,
   communication.notifications ("muted"|"normal"|"priority"),
   communication.messageStyle ("one-liners"|"balanced"|"bursty"|"longform"),
   communication.initiative ("low"|"medium"|"high"),
   communication.lifeSharing ("low"|"medium"|"high").
-- set_stage { stage: string } — установить стадию отношений (id из списка).
-- set_communication_preset { id: string } — применить пресет общения и записать communication.md.
-- write_memory { file: string, content: string } — переписать файл памяти.
-  Допустимые файлы: persona.md, speech.md, boundaries.md, communication.md, long-term.md, memory/long-term.md, memory/facts.md, memory/uncertain.md, time/promises.md, time/open-loops.md.
-- append_memory { file: string, content: string } — добавить строку в файл памяти.
-- generate_persona { name?: string, age?: number, nationality?: string, notes?: string } — LLM-генерация persona.md/speech.md/communication.md (это занимает ~30s).
-- runtime_action { action: "start"|"stop"|"pause"|"resume"|"restart" } — управление рантаймом.
-- send_command { command: string, args?: string[] } — отправить runtime-команду (status, why, wake, debug, reset).
-- list_presets { kind: "llm"|"stage"|"communication" } — показать список пресетов (только для тебя, не показывает в UI).
-- read_logs { limit?: number, type?: "in"|"out"|"info"|"warn"|"error" } — прочесть последние строки runtime-лога.
-- read_memory { file: string } — прочесть файл памяти.
+- set_stage { stage: string } — 设置关系阶段（从列表中选择 id）。
+- set_communication_preset { id: string } — 应用沟通预设并写入 communication.md。
+- write_memory { file: string, content: string } — 重写记忆文件。
+  允许的文件：persona.md, speech.md, boundaries.md, communication.md, long-term.md, memory/long-term.md, memory/facts.md, memory/uncertain.md, time/promises.md, time/open-loops.md。
+- append_memory { file: string, content: string } — 向记忆文件追加一行。
+- generate_persona { name?: string, age?: number, nationality?: string, notes?: string } — LLM 生成 persona.md/speech.md/communication.md（约需 30 秒）。
+- runtime_action { action: "start"|"stop"|"pause"|"resume"|"restart" } — 管理运行时。
+- send_command { command: string, args?: string[] } — 发送运行时命令（status, why, wake, debug, reset）。
+- list_presets { kind: "llm"|"stage"|"communication" } — 显示预设列表（仅限你查看，不在 UI 中显示）。
+- read_logs { limit?: number, type?: "in"|"out"|"info"|"warn"|"error" } — 读取运行时日志的最后几行。
+- read_memory { file: string } — 读取记忆文件。
 
-Вопросы к пользователю:
-Ты можешь задать пользователю вопрос с вариантами ответа (кнопками). Добавь в ответ блок:
-<question text="Текст вопроса?">
-  <option label="Вариант 1">Описание варианта</option>
-  <option label="Вариант 2">Описание варианта</option>
+向用户提问：
+你可以向用户提问并提供选项（按钮）。在回答中添加以下块：
+<question text="问题文本？">
+  <option label="选项 1">选项描述</option>
+  <option label="选项 2">选项描述</option>
 </question>
-- Кнопок от 1 до 10.
-- Можно до 25 последовательных вопросов (диалог).
-- label — текст на кнопке (короткий), описание — пояснение (1 строка, опционально).
-- Пользователь может нажать кнопку или написать свой вариант в текстовом поле.
-- Используй вопросы когда нужен выбор: стиль общения, стадия, конкретный пресет и т.д.
+- 按钮数量 1 到 10 个。
+- 最多可连续提问 25 个问题（对话）。
+- label — 按钮上的文字（简短），描述 — 说明（1 行，可选）。
+- 用户可以点击按钮或在文本框中输入自己的答案。
+- 当需要选择时使用提问：沟通风格、阶段、具体预设等。
 
-Важные подсказки:
-- ignoreTendency: 0 — всегда отвечает; 100 — почти всегда игнорит. По умолчанию 35.
-- Если пользователь жалуется что "не отвечает" → проверь runtime state и read_logs.
-- Если LLM ошибки → проверь llm.apiKey, llm.baseURL, llm.model.
-- Если сменили telegram.mode — обязательно нужен restart.`;
+重要提示：
+- ignoreTendency：0 — 总是回复；100 — 几乎总是忽略。默认值 35。
+- 如果用户抱怨"不回复"→ 检查 runtime state 和 read_logs。
+- 如果出现 LLM 错误 → 检查 llm.apiKey, llm.baseURL, llm.model。
+- 如果更改了 telegram.mode — 必须 restart。`;
 
 export function registerAssistantRoutes(r: Router): void {
   r.post("/api/assistant/chat", async (ctx) => {
@@ -103,7 +103,7 @@ export function registerAssistantRoutes(r: Router): void {
 
     if (!cfg) {
       const last = body.messages[body.messages.length - 1];
-      const reply = `Привет! У вас ещё нет ни одного профиля. Откройте Setup Flow или вкладку Конфигурация → Новый профиль. Я подключусь, когда появится первый профиль.\n\nВаш вопрос: ${typeof last?.content === "string" ? last.content : ""}`;
+      const reply = `你好！你还没有任何个人资料。请打开设置流程或配置 → 新建资料标签页。创建第一个资料后我会自动连接。\n\n你的问题：${typeof last?.content === "string" ? last.content : ""}`;
       return { reply, toolCalls: [] };
     }
 
@@ -150,9 +150,9 @@ export function registerAssistantRoutes(r: Router): void {
     } catch { /* ignore */ }
 
     const runtimeContext = [
-      `Текущий профиль: ${cfg.name}, ${cfg.age}, ${cfg.nationality}, tz=${cfg.tz}`,
+      `当前资料：${cfg.name}, ${cfg.age}, ${cfg.nationality}, tz=${cfg.tz}`,
       `slug=${cfg.slug}, runtime=${status.state}${status.lastError ? `, lastError=${status.lastError}` : ""}`,
-      `стадия "${stage.label}" (${cfg.stage}), ${stage.description}`,
+      `阶段 "${stage.label}" (${cfg.stage}), ${stage.description}`,
       `stage defaults: ignoreChance=${stage.defaults.ignoreChance}, replyDelaySec=${stage.defaults.replyDelaySec[0]}-${stage.defaults.replyDelaySec[1]}`,
       `privacy=${cfg.privacy ?? "owner-only"}, ownerId=${cfg.ownerId ?? "—"}, ignoreTendency=${cfg.ignoreTendency ?? 35}`,
       `sleep=${cfg.sleepFrom}:00-${cfg.sleepTo}:00, nightWakeChance=${cfg.nightWakeChance}`,
@@ -164,9 +164,9 @@ export function registerAssistantRoutes(r: Router): void {
 
     const ctxPrompt = [
       relevantKnowledge,
-      `Контекст активного профиля:\n${runtimeContext}`,
+      `活动资料上下文：\n${runtimeContext}`,
       memoryContext,
-      recentLogs ? `Последние события runtime'а:\n${recentLogs.slice(-2500)}` : ""
+      recentLogs ? `运行时最新事件：\n${recentLogs.slice(-2500)}` : ""
     ].filter(Boolean).join("\n\n");
 
     const llm = makeLLM(cfg.llm);
@@ -185,7 +185,7 @@ export function registerAssistantRoutes(r: Router): void {
 
     const toolCalls = parseToolCalls(reply);
     const cleanReply = reply.replace(/<tool>[\s\S]*?<\/tool>/g, "").trim();
-    // <question> блоки оставляем — фронт сам парсит для кнопок
+    // <question> 块保留——前端自行解析为按钮
     return { reply: cleanReply, toolCalls };
   });
 
@@ -251,7 +251,7 @@ async function applyTool(cfg: ProfileConfig, call: AssistantToolCall): Promise<{
     case "set_stage": {
       const stage = String(call.args?.stage ?? "") as StageId;
       const found = STAGE_PRESETS.find(s => s.id === stage);
-      if (!found) return { changed: false, message: `unknown stage: ${stage}. Доступные: ${STAGE_PRESETS.map(s => s.id).join(", ")}` };
+      if (!found) return { changed: false, message: `unknown stage: ${stage}。可用选项：${STAGE_PRESETS.map(s => s.id).join(", ")}` };
       const prevStage = cfg.stage;
       cfg.stage = stage;
       try {
@@ -267,8 +267,8 @@ async function applyTool(cfg: ProfileConfig, call: AssistantToolCall): Promise<{
       const preset = findCommunicationPreset(id);
       if (!preset) return { changed: false, message: `unknown communication preset: ${id}` };
       cfg.communication = { ...preset.profile };
-      const md = `# Стиль общения
-Пресет: ${preset.label} (${preset.id})
+      const md = `# 沟通风格
+预设：${preset.label} (${preset.id})
 ${preset.description}
 
 - notifications: ${preset.profile.notifications}
@@ -307,7 +307,7 @@ ${preset.description}
           (cfg.nationality ?? "RU") as "RU" | "UA",
           typeof call.args?.notes === "string" ? call.args.notes as string : (cfg.personaNotes ?? "")
         );
-        return { changed: false, message: `сгенерировано: ${Object.keys(out).join(", ")}` };
+        return { changed: false, message: `已生成：${Object.keys(out).join(", ")}` };
       } catch (e) {
         return { changed: false, message: `persona-gen error: ${(e as Error).message}` };
       }
@@ -330,7 +330,7 @@ ${preset.description}
       const args = Array.isArray(call.args?.args) ? (call.args.args as string[]) : [];
       if (!cmd) return { changed: false, message: "command required" };
       const rt = bus.get(cfg.slug);
-      if (!rt) return { changed: false, message: "runtime не запущен" };
+      if (!rt) return { changed: false, message: "运行时未启动" };
       try {
         let text = "";
         switch (cmd) {
@@ -355,7 +355,7 @@ ${preset.description}
       const buf = bus.recentLogs(cfg.slug, 200);
       const filtered = type ? buf.filter(e => e.type === type) : buf;
       const text = filtered.slice(-limit).map(e => `[${e.type}] ${e.text ?? ""}`).join("\n");
-      return { changed: false, message: text || "(нет событий)" };
+      return { changed: false, message: text || "（无事件）" };
     }
 
     case "read_memory": {
@@ -363,9 +363,9 @@ ${preset.description}
       if (!ALLOWED_MEMORY.has(file)) return { changed: false, message: `file not allowed: ${file}` };
       try {
         const content = await readMd(cfg.slug, file);
-        return { changed: false, message: content || "(пусто)" };
+        return { changed: false, message: content || "（空）" };
       } catch {
-        return { changed: false, message: "(файл не существует)" };
+        return { changed: false, message: "（文件不存在）" };
       }
     }
 
@@ -397,7 +397,7 @@ function renderAssistantMemoryContext(parts: Record<string, string>): string {
   ]
     .map(([name, text]) => renderContextSection(name, text))
     .filter(Boolean);
-  return sections.length ? `Память и файлы профиля:\n${sections.join("\n\n")}` : "";
+  return sections.length ? `资料记忆和文件：\n${sections.join("\n\n")}` : "";
 }
 
 function renderContextSection(name: string, text: string): string {

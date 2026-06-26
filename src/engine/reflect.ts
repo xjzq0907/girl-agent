@@ -17,7 +17,7 @@ function clamp(n: number, lo = -100, hi = 100) {
   return Math.max(lo, Math.min(hi, Math.round(n)));
 }
 
-const REFLECT_SYS = `Ты — журналист, ведущий дневник девушки. По недавнему обмену сообщениями обнови её внутреннее отношение к парню. Кратко.`;
+const REFLECT_SYS = `你是一位记录女孩日记的记者。根据最近的聊天记录，更新她对男生的内心态度。简短些。`;
 
 export async function maybeReflect(
   llm: LLMClient,
@@ -26,10 +26,10 @@ export async function maybeReflect(
   conflict: ConflictState | null = null
 ): Promise<void> {
   if (recent.length < 6) return;
-  const transcript = recent.slice(-12).map(m => `${m.role === "user" ? "он" : cfg.name}: ${m.content}`).join("\n");
+  const transcript = recent.slice(-12).map(m => `${m.role === "user" ? "他" : cfg.name}: ${m.content}`).join("\n");
 
   const conflictNote = conflict && conflict.level > 0
-    ? `\n\nВАЖНО: у неё сейчас КОНФЛИКТ с ним (level ${conflict.level}, причина: "${conflict.reason ?? "—"}"). Это влияет на её рефлексию:\n- Level 1: лёгкая обида — чуть более критична к его словам\n- Level 2: серьёзная обида — более негативная рефлексия, фокус на недостатках\n- Level 3+: сильный конфликт — очень негативная рефлексия, может думать что "всё зря"\n- Отрази это в feelingShift и newFacts.`
+    ? `\n\n重要：她目前和他有矛盾 (level ${conflict.level}, 原因: "${conflict.reason ?? "—"}")。这会影响她的反思：\n- Level 1: 轻微受伤 — 对他的话更挑剔一些\n- Level 2: 严重受伤 — 更负面的反思，聚焦缺点\n- Level 3+: 激烈矛盾 — 非常负面的反思，可能会觉得"一切都没意义"\n- 请体现在 feelingShift 和 newFacts 中。`
     : "";
 
   try {
@@ -38,15 +38,15 @@ export async function maybeReflect(
         { role: "system", content: REFLECT_SYS },
         {
           role: "user",
-          content: `Имя: ${cfg.name}, ${cfg.age} лет. Стадия: ${cfg.stage}.${conflictNote}
-Последние сообщения:
+          content: `姓名: ${cfg.name}, ${cfg.age} 岁。阶段: ${cfg.stage}.${conflictNote}
+最新消息:
 ${transcript}
 
-Верни JSON:
+返回 JSON:
 {
-  "newFacts": ["короткие факты о нём, которые стоит запомнить"],
-  "feelingShift": "1-2 предложения о том как поменялось её отношение",
-  "stageHint": "оставить как есть | повысить | понизить | dumped"
+  "newFacts": ["关于他值得记住的简短事实"],
+  "feelingShift": "1-2句话描述她的态度如何改变",
+  "stageHint": "保持 | 提升 | 降低 | dumped"
 }`
         }
       ],

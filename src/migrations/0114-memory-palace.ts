@@ -3,7 +3,7 @@ import { migrateExistingMemoryToPalace } from "../engine/memory-palace.js";
 
 export const migration0114: Migration = {
   id: "0114-memory-palace",
-  description: "Перенести существующие файлы памяти в структуру Memory Palace",
+  description: "将现有内存文件迁移到 Memory Palace 结构",
 
   async migrate(ctx): Promise<typeof ctx.config> {
     const made = await migrateExistingMemoryToPalace(ctx.config);

@@ -13,34 +13,34 @@ export function DiagnosticsPage() {
   return (
     <div className="grid" style={{ gap: 16, maxWidth: 720 }}>
       <div className="card">
-        <div className="card-header"><div className="h-title">Версия</div></div>
+        <div className="card-header"><div className="h-title">版本</div></div>
         <div className="grid cols-2">
-          <div className="form-row"><label>Текущая</label><div>{version?.current ?? "..."}</div></div>
-          <div className="form-row"><label>Последняя</label><div>{version?.latest ?? "—"}</div></div>
+          <div className="form-row"><label>当前</label><div>{version?.current ?? "..."}</div></div>
+          <div className="form-row"><label>最新</label><div>{version?.latest ?? "—"}</div></div>
         </div>
-        <div className="hint">обновление: <code>npm i -g @thesashadev/girl-agent</code> или <code>docker pull ghcr.io/thesashadev/girl-agent:latest</code></div>
+        <div className="hint">更新: <code>npm i -g @thesashadev/girl-agent</code> 或 <code>docker pull ghcr.io/thesashadev/girl-agent:latest</code></div>
       </div>
 
       <div className="card">
-        <div className="card-header"><div className="h-title">Окружение</div></div>
+        <div className="card-header"><div className="h-title">运行环境</div></div>
         {diag && (
           <div className="grid cols-2">
-            <div className="form-row"><label>Платформа</label><div>{diag.platform} / {diag.arch}</div></div>
+            <div className="form-row"><label>平台</label><div>{diag.platform} / {diag.arch}</div></div>
             <div className="form-row"><label>Node</label><div>{diag.node}</div></div>
-            <div className="form-row"><label>Хост</label><div>{diag.hostname}</div></div>
+            <div className="form-row"><label>主机</label><div>{diag.hostname}</div></div>
             <div className="form-row"><label>RAM</label><div>{diag.memTotalMB} MB</div></div>
-            <div className="form-row"><label>Uptime</label><div>{Math.round(diag.uptime)} сек</div></div>
+            <div className="form-row"><label>Uptime</label><div>{Math.round(diag.uptime)} 秒</div></div>
             <div className="form-row"><label>Data root</label><div style={{ fontFamily: "var(--ga-font-mono)", fontSize: 12 }}>{diag.dataRoot}</div></div>
-            <div className="form-row" style={{ gridColumn: "span 2" }}><label>IPv4</label><div>{diag.ipv4.length ? diag.ipv4.join(", ") : "(только loopback)"}</div></div>
+            <div className="form-row" style={{ gridColumn: "span 2" }}><label>IPv4</label><div>{diag.ipv4.length ? diag.ipv4.join(", ") : "(仅 loopback)"}</div></div>
           </div>
         )}
       </div>
 
       <div className="card">
-        <div className="card-header"><div className="h-title">VPN / прокси</div></div>
-        <div className="hint">girl-agent использует WSS (websocket) для Telegram по умолчанию — это обходит большинство блокировок.<br />
-          Если из РФ не подключается к LLM — выберите пресет <strong>ClaudeHub</strong>: работает без VPN.<br />
-          Если есть свой прокси — укажите в разделе <strong>Конфигурация → Telegram → Прокси</strong>.</div>
+        <div className="card-header"><div className="h-title">VPN / 代理</div></div>
+        <div className="hint">girl-agent 默认使用 WSS (websocket) 连接 Telegram — 可绕过大多数封锁。<br />
+          如果从俄罗斯无法连接到 LLM — 选择预设 <strong>ClaudeHub</strong>：无需 VPN 即可使用。<br />
+          如果有自己的代理 — 在 <strong>配置 → Telegram → 代理</strong> 中设置。</div>
       </div>
     </div>
   );

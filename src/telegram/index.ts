@@ -11,27 +11,27 @@ export interface IncomingMessage {
   replyTo?: IncomingMessageContext;
   forward?: IncomingForwardContext;
   /**
-   * Если сообщение — это реакция-эмодзи юзера на её сообщение (Issue #76).
-   * `text` в этом случае пустой, вместо этого заполнен emojiReaction.
+   * 如果消息是用户对她的消息的emoji反应（Issue #76）。
+   * 此时 `text` 为空，取而代之的是 emojiReaction。
    */
   emojiReaction?: {
-    /** Эмодзи реакции (один символ или emoji-sequence). */
+    /** 反应的emoji（单个字符或emoji序列）。 */
     emoji: string;
-    /** ID сообщения, на которое поставили реакцию (её сообщение). */
+    /** 被添加反应的消息ID（她的消息）。 */
     targetMessageId: number;
-    /** При снятии реакции — true. */
+    /** 取消反应时为 true。 */
     removed?: boolean;
   };
   /**
-   * Если сообщение — это уведомление об удалении сообщения юзером (Task #15).
-   * `text` пустой; в deletion.text — исходный текст из истории.
+   * 如果消息是用户删除消息的通知（Task #15）。
+   * `text` 为空；deletion.text 中是来自历史的原始文本。
    */
   deletion?: {
-    /** ID удалённого сообщения. */
+    /** 已删除消息的ID。 */
     messageId: number;
-    /** Исходный текст (если был в истории). */
+    /** 原始文本（如果历史中有的话）。 */
     text: string;
-    /** Как давно было исходное сообщение (в секундах на момент удаления). */
+    /** 原始消息距今多久（以秒为单位，删除时的时刻）。 */
     ageSec: number;
   };
 }
@@ -63,14 +63,14 @@ export interface TgAdapter {
   start(onMessage: (m: IncomingMessage) => Promise<void>): Promise<void>;
   sendText(chatId: number | string, text: string): Promise<number | undefined>;
   setTyping(chatId: number | string, on: boolean): Promise<void>;
-  /** Реакция на сообщение. Эмодзи 1 символ. Тихий no-op если не поддерживается. */
+  /** 对消息添加反应。emoji为单个字符。不支持时静默无操作。 */
   setReaction(chatId: number | string, messageId: number, emoji: string): Promise<void>;
-  /** Отредактировать ранее отправленное сообщение (Task #1). Тихий no-op если не поддерживается. */
+  /** 编辑已发送的消息（Task #1）。不支持时静默无操作。 */
   editText?(chatId: number | string, messageId: number, newText: string): Promise<void>;
   /**
-   * Issue #81 — пинг статуса «онлайн» в Telegram без отправки сообщения.
-   * Для юзербота вызывает account.UpdateStatus, для bot-режима тихий no-op
-   * (у ботов нет last seen).
+   * Issue #81 — 在Telegram中ping"在线"状态，无需发送消息。
+   * 对于userbot调用 account.UpdateStatus，对于bot模式静默无操作
+   * （bot没有 last seen）。
    */
   updateOnlineStatus?(online: boolean): Promise<void>;
   blockContact?(chatId: number | string): Promise<void>;
@@ -79,7 +79,7 @@ export interface TgAdapter {
   reportSpam?(chatId: number | string): Promise<void>;
   sendSticker?(chatId: number | string, fileId: string): Promise<void>;
   deleteMessages?(chatId: number | string, messageIds: number[], revoke?: boolean): Promise<void>;
-  /** Возвращает информацию о самом боте/юзерботе: username и отображаемое имя в ТГ. */
+  /** 返回bot/userbot自身的信息：username和在TG中的显示名。 */
   getSelf?(): { username?: string; displayName?: string };
   stop(): Promise<void>;
 }

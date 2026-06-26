@@ -11,10 +11,10 @@ export function ApplyPill() {
   return (
     <div className="apply-pill">
       <div className="text">
-        <strong>{fieldCount}</strong> {fieldCount === 1 ? "поле изменено" : "полей изменено"}
+        <strong>{fieldCount}</strong> {fieldCount === 1 ? "个字段已修改" : "个字段已修改"}
       </div>
-      <button className="btn tiny ghost" onClick={resetDraft}>Отменить</button>
-      <button className="btn primary tiny" onClick={() => void applyDraft()}>Применить</button>
+      <button className="btn tiny ghost" onClick={resetDraft}>取消</button>
+      <button className="btn primary tiny" onClick={() => void applyDraft()}>应用</button>
     </div>
   );
 }

@@ -31,7 +31,7 @@ export function makeBotAdapter(cfg: ProfileConfig): TgAdapter {
         };
         await onMessage(msg);
       });
-      // Эмодзи-реакции юзера на её сообщения (Issue #76 / Task #16).
+      // 用户对她消息的 emoji 反应 (Issue #76 / Task #16)。
       bot.on("message_reaction", async (ctx) => {
         const upd = ctx.update.message_reaction as any;
         if (!upd) return;
@@ -55,22 +55,22 @@ export function makeBotAdapter(cfg: ProfileConfig): TgAdapter {
         };
         await onMessage(msg).catch(() => {});
       });
-      // Сначала init() — упадёт быстро при невалидном токене / сетевом блоке.
-      // Без этого bot.start().catch выше глотал ошибки молча и юзер видел
-      // лишь "Telegram bot запущен", при том что апдейты не приходили.
+      // 先执行 init() — 在 token 无效或网络被阻断时会快速失败。
+      // 否则上面的 bot.start().catch 会默默吞掉错误，用户只能看到
+      // "Telegram bot 已启动"，但实际上收不到任何更新。
       try {
         await bot.init();
       } catch (e) {
-        throw new Error(`Telegram bot init failed: ${(e as Error)?.message ?? e}. Проверь BOT_TOKEN (BotFather), доступ к api.telegram.org и что другой инстанс бота не держит long-polling.`);
+        throw new Error(`Telegram bot init failed: ${(e as Error)?.message ?? e}. 请检查 BOT_TOKEN (BotFather)、对 api.telegram.org 的访问，以及是否有其他 bot 实例占用了 long-polling。`);
       }
       const me = bot.botInfo;
       selfInfo = {
         username: me.username ?? undefined,
         displayName: [me.first_name, me.last_name].filter(Boolean).join(" ") || undefined
       };
-      // Запускаем long-polling в фоне. Если оно упадёт (Conflict / 401 / сеть) —
-      // пишем в stderr, чтобы юзер реально видел причину, а не молчаливый рестарт.
-      // allowed_updates: включаем message_reaction и все базовые подписки.
+      // 在后台启动 long-polling。如果它崩溃（Conflict / 401 / 网络问题）—
+      // 写入 stderr，让用户能真正看到原因，而不是静默重启。
+      // allowed_updates: 启用 message_reaction 和所有基础订阅。
       bot.start({
         drop_pending_updates: true,
         allowed_updates: ["message", "edited_message", "callback_query", "message_reaction"]
@@ -94,12 +94,12 @@ export function makeBotAdapter(cfg: ProfileConfig): TgAdapter {
       }
     },
     async setReaction(chatId, messageId, emoji) {
-      // Telegram Bot API принимает только ограниченный список эмодзи. Если пришёл не из
-      // списка (например 😏, 🙄, 🥺) — нормализуем в близкий доступный, иначе setMessageReaction
-      // молча отдаст 400 и реакция не появится у пользователя.
+      // Telegram Bot API 只接受有限的 emoji 列表。如果收到不在
+      // 列表中的（例如 😏、🙄、🥺）— 归一化为最接近的可用 emoji，否则 setMessageReaction
+      // 会静默返回 400，用户侧不会看到反应。
       const normalized = normalizeBotReactionEmoji(emoji);
       if (!normalized) {
-        process.stderr.write(`[bot] reaction "${emoji}" не поддерживается Bot API и нет замены — пропускаем\n`);
+        process.stderr.write(`[bot] reaction "${emoji}" 不被 Bot API 支持且无替代 — 跳过\n`);
         return;
       }
       try {
@@ -107,8 +107,8 @@ export function makeBotAdapter(cfg: ProfileConfig): TgAdapter {
           { type: "emoji", emoji: normalized as any }
         ]);
       } catch (e) {
-        // Не глотаем молча: пишем в stderr, чтобы можно было увидеть причину
-        // ("chat not found", "REACTION_INVALID", "PEER_REACTIONS_DISABLED" и т.п.).
+        // 不静默吞掉：写入 stderr，以便查看原因
+        // （"chat not found"、"REACTION_INVALID"、"PEER_REACTIONS_DISABLED" 等）。
         process.stderr.write(`[bot] setMessageReaction("${normalized}", chat=${chatId}, msg=${messageId}) failed: ${(e as Error)?.message ?? e}\n`);
       }
     },
@@ -237,7 +237,7 @@ function botConfig(cfg: ProfileConfig): ConstructorParameters<typeof Bot>[1] {
   const proxy = cfg.telegram.proxy;
   if (proxy) {
     if (proxy.MTProxy) {
-      process.stderr.write("[bot] MTProxy не поддерживается Bot API; используй socks5:// или botApi.apiRoot\n");
+      process.stderr.write("[bot] MTProxy 不被 Bot API 支持；请使用 socks5:// 或 botApi.apiRoot\n");
     } else {
       client.baseFetchConfig = {
         agent: new SocksProxyAgent(botSocksProxyUrl(proxy))

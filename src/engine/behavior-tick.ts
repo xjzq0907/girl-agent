@@ -6,15 +6,15 @@ import { readRelationship } from "../storage/md.js";
 import type { PresenceState } from "./presence.js";
 import type { ConflictState } from "./conflict.js";
 
-const SYS = `Ты — внутренний "decision layer" для симуляции живой девушки. По текущему состоянию реши, как она отреагирует на новое сообщение от парня. Никаких разговоров — только JSON.`;
+const SYS = `你是模拟真人女友的内部"决策层"。根据当前状态，决定她对男友新消息的反应。不要对话——只输出JSON。`;
 
 interface BehaviorContext {
   presence?: PresenceState;
   conflict?: ConflictState;
   conflictColdActive?: boolean;
-  blockHint?: string; // что она сейчас делает по daily-life
+  blockHint?: string; // 她当前在 daily-life 中做什么
   activeDialog?: boolean;
-  /** Последние входящие сообщения с их TG message ID — для реакций. */
+  /** 最近收到的消息及其TG消息ID——用于反应。 */
   recentIncomingIds?: Array<{ messageId: number; text: string }>;
 }
 
@@ -23,88 +23,88 @@ function reactionMenu(stage: string, score: { attraction: number; interest: numb
   const isCold = score.annoyance > 40 || stage === "tg-given-cold";
 
   if (isWarm) {
-    return `Доступные реакции (СТАДИЯ ТЁПЛАЯ — она расположена к нему):
-- ❤ / 🥰 / 🥹 — на милое/трогательное
-- 😂 / 🤭 — на смешное
-- 🔥 — на крутое
-- 👀 — на интригующее
-- 🥺 — когда хочется внимания
-- 😅 — когда лажа но милая
-ЗАПРЕЩЕНО ставить: 🤡, 💀, 🤮, 🖕, 😐, 🙄 — влюблённая/расположенная девушка не пошлёт такое любимому. На неудачную шутку она просто мило не искренне посмеётся в тексте ("ахах ну такое") или поставит ❤/😂.`;
+    return `可用反应（温暖阶段——她对他有感觉）:
+- ❤ / 🥰 / 🥹 — 对可爱/动人的内容
+- 😂 / 🤭 — 对好笑的内容
+- 🔥 — 对厉害的内容
+- 👀 — 对引人好奇的内容
+- 🥺 — 想要关注时
+- 😅 — 虽然尴尬但可爱
+禁止使用: 🤡, 💀, 🤮, 🖕, 😐, 🙄 — 喜欢/有好感的女生不会对喜欢的人发这些。对于不好笑的笑话，她只会在文字里可爱地假笑（"哈哈就这"）或用 ❤/😂。`;
   }
   if (isCold) {
-    return `Доступные реакции (СТАДИЯ ХОЛОДНАЯ/конфликт — она дистанцируется):
-- 👍 / 👌 — отстранённое подтверждение
-- 😐 / 🙄 — раздражение
-- 🤡 — на кринж от него
-- 💀 — на полный треш от него
-- 🤔 — недоумение
-ЗАПРЕЩЕНО ставить: ❤, 🥰, 🥹, 🥺, 🔥 — это сигналы тепла, она его сейчас не даёт.`;
+    return `可用反应（冷淡/冲突阶段——她正在疏远）:
+- 👍 / 👌 — 冷淡确认
+- 😐 / 🙄 — 烦躁
+- 🤡 — 对他尴尬言行
+- 💀 — 对他彻底离谱的言行
+- 🤔 — 疑惑
+禁止使用: ❤, 🥰, 🥹, 🥺, 🔥 — 这些是温暖信号，她现在不会发。`;
   }
-  // нейтральная середина
-  return `Доступные реакции (нейтральная стадия):
-- 👍 / 👌 — ок, принято
-- 😂 / 🤭 — на смешное
-- 🤔 — задумалась
-- 🔥 — если реально круто
-- 🤡 — только на явный кринж и без злобы
-- 😐 — устала
-Не ставь ❤/🥰 пока стадия не warming или выше — это палево, рано ещё.`;
+  // 中性中间
+  return `可用反应（中立阶段）:
+- 👍 / 👌 — 好的，收到
+- 😂 / 🤭 — 对好笑的内容
+- 🤔 — 在思考
+- 🔥 — 如果真的很厉害
+- 🤡 — 仅针对明显尴尬且不带恶意
+- 😐 — 累了
+不要发 ❤/🥰，除非阶段到了 warming 或更高——太暴露了，还太早。`;
 }
 
 function formatIncomingIds(ids: Array<{ messageId: number; text: string }> | undefined): string {
   if (!ids || ids.length === 0) return "";
   const lines = ids.map(m => `  id=${m.messageId}: "${m.text.slice(0, 60)}"`);
-  return `\nПоследние его сообщения (для reactionTargetMessageId):\n${lines.join("\n")}`;
+  return `\n他最近的消息（用于 reactionTargetMessageId）:\n${lines.join("\n")}`;
 }
 
-const TEMPLATE = (state: string, history: string, incoming: string, ctx: BehaviorContext, reactionsHint: string) => `Состояние:
+const TEMPLATE = (state: string, history: string, incoming: string, ctx: BehaviorContext, reactionsHint: string) => `状态:
 ${state}
-${ctx.presence ? `\nПрисутствие: ${ctx.presence.online ? "онлайн" : "офлайн"}${ctx.presence.asleep ? ", СПИТ" : ""}${ctx.presence.nightAwake ? ", НОЧНОЕ ПРОБУЖДЕНИЕ (заспанная, коротко)" : ""} (локально ${ctx.presence.localHour}:00). ${ctx.presence.hint}` : ""}
-${ctx.blockHint ? `\nЧто сейчас делает: ${ctx.blockHint}` : ""}
-${ctx.activeDialog ? `\nАКТИВНЫЙ ДИАЛОГ: она уже недавно ответила, а он написал в течение нескольких минут. Продолжай переписку, не уходи в случайный игнор без веской причины.` : ""}
-${ctx.conflict && ctx.conflict.level > 0 ? `\nКонфликт: level ${ctx.conflict.level}, ${ctx.conflictColdActive ? "АКТИВНЫЙ cold-период (молчит/игнорит)" : "после-конфликтный осадок"}, причина: ${ctx.conflict.reason ?? "—"}` : ""}
+${ctx.presence ? `\n在线状态: ${ctx.presence.online ? "在线" : "离线"}${ctx.presence.asleep ? ", 正在睡觉" : ""}${ctx.presence.nightAwake ? ", 夜间醒来（困倦，简短）" : ""} (当地时间 ${ctx.presence.localHour}:00)。${ctx.presence.hint}` : ""}
+${ctx.blockHint ? `\n当前正在做什么: ${ctx.blockHint}` : ""}
+${ctx.activeDialog ? `\n活跃对话: 她刚回复过，而他几分钟内又发了消息。继续聊天，不要无缘无故随机忽略。` : ""}
+${ctx.conflict && ctx.conflict.level > 0 ? `\n冲突: level ${ctx.conflict.level}, ${ctx.conflictColdActive ? "活跃冷淡期（沉默/无视）" : "冲突后余波"}, 原因: ${ctx.conflict.reason ?? "—"}` : ""}
 
-Последние сообщения (последнее — от него):
+最近消息（最后一条来自他）:
 ${history}
 
-НОВОЕ сообщение от него:
+他的新消息:
 """${incoming}"""
 
 ${reactionsHint}
 ${formatIncomingIds(ctx.recentIncomingIds)}
 
-Реши и верни СТРОГО JSON:
+决定并严格返回JSON:
 {
   "intent": "reply" | "ignore" | "short" | "left-on-read" | "leave-chat" | "reaction-only",
   "shouldReply": boolean,
-  "shouldRead": boolean (даже если не отвечает, прочитать и поставить галочки? left-on-read=false, ignore=true если она зашла и прочитала),
-  "delaySec": число (0..3600 секунд. Если она офлайн/занята/конфликт — большие задержки нормальны. Если активный диалог — маленькие.),
-  "bubbles": число (1..6),
+  "shouldRead": boolean (即使不回复，也要读消息并标记已读？她看了但未回复=left-on-read，看了且决定无视=ignore),
+  "delaySec": 数字 (0..3600秒。如果她离线/忙碌/冲突中——长延迟正常。如果是活跃对话——短延迟。),
+  "bubbles": 数字 (1..6),
   "typing": boolean,
-  "reaction": "" или ОДИН эмодзи из доступного списка выше. Не из запрещённого!,
-  "reactionTargetMessageId": ID сообщения из списка ниже, на которое ставишь реакцию. Девушки в тг иногда реагируют на более раннее сообщение в бурсте — например он рассказал две вещи, она вернулась позже и поставила реакцию на первое. Не используй без reaction.,
-  "ignoreReason": строка или "",
-  "moodDelta": { "interest": число, "trust": число, "attraction": число, "annoyance": число, "cringe": число }
+  "reaction": "" 或从上方可用列表中选择一个表情。不能是禁止的!,
+  "reactionTargetMessageId": 下方列表中要反应的消息ID。TG女生有时会回头对消息组中较早的消息做出反应——比如他说了两件事，她稍后回来对第一条做了反应。没有reaction时不要用。,
+  "ignoreReason": 字符串或 "",
+  "moodDelta": { "interest": 数字, "trust": 数字, "attraction": 数字, "annoyance": 数字, "cringe": 数字 }
 }
 
-Правила:
-- Если cold-period конфликта АКТИВЕН — почти всегда ignore или сухой short ответ. Ни ❤, ни ")".
-- Если она СПИТ — ignore или left-on-read (shouldRead=false). Если энергично написал ночью — может разозлить (annoyance +).
-- Если она занята по presence — не отвечай сразу; если сообщение в целом заслуживает ответа, ставь shouldReply=true и большой delaySec, runtime дотянет его до времени когда она освободится и проверит Telegram.
-- Если она офлайн (не спит) — допустимо высокое delaySec (300-2400с) И normal reply, либо ignore с shouldRead=true (она зашла, прочитала, но ответит позже).
-- Если communication.notifications=priority — она чаще видит именно его уведомления; без сна/конфликта не превращай каждое офлайн-состояние в игнор.
-- Если communication.messageStyle=bursty — bubbles 2..5 нормальны даже на обычный ответ. Если one-liners — bubbles чаще 1.
-- Если communication.lifeSharing=high — уместно чаще выбрать normal reply, где она может поделиться своим моментом из жизни.
-- В русскоязычном Telegram одиночная ")" в конце ЕГО сообщения обычно означает улыбку/лёгкую теплоту, а не холод и не "неинтересно". Не повышай annoyance/cringe только из-за ")".
-- Если стадия "tg-given-cold" и сообщение скучное/невнятное — высокая вероятность ignore или left-on-read.
-- Если в сообщении кринж/токсик/нарушение boundaries — annoyance растёт, может быть ignore или leave-chat.
-- Если милое/уместное на тёплой стадии — interest и attraction +.
-- Длинная простыня от него — bubbles её ответа НЕ становится больше; скорее наоборот.
-- moodDelta: маленькие числа -10..+10.
-- Реакции — реальные девушки 2026 чаще ставят TG-реакцию чем эмодзи в текст. Если сообщение цепануло, а отвечать не хочется — "intent":"reaction-only", "shouldReply":false, "reaction":"...". По умолчанию reaction="".
-- ВАЖНО: реакция должна соответствовать её отношению. Влюблённая НЕ ставит 🤡 на мем — она поставит 😂/❤ или мило посмеётся текстом. Холодная НЕ ставит ❤.
-- НЕ оборачивай в markdown. Только JSON.`;
+规则:
+- 如果冲突冷淡期活跃——几乎总是ignore或干巴巴的short回复。没有 ❤，也没有 ")"。
+- 如果她正在睡觉——ignore或left-on-read (shouldRead=false)。如果他在夜里发了很多消息——可能惹她生气 (annoyance +)。
+- 如果她处于忙碌状态——不要立即回复；如果消息值得回复，设置shouldReply=true和大delaySec，运行时会在她空闲并查看Telegram时发送。
+- 如果她离线（没在睡觉）——可以有高delaySec (300-2400秒) 加上正常回复，或者ignore且shouldRead=true（她看了一下，读了，但稍后回复）。
+- 如果 communication.notifications=priority ——她更容易看到他的通知；没有睡觉/冲突时，不要把每个离线状态都变成无视。
+- 如果 communication.messageStyle=bursty ——即使普通回复bubbles 2..5也正常。如果one-liners——bubbles更多是1。
+- 如果 communication.lifeSharing=high ——更适合选normal reply，她可以分享自己的生活片段。
+- 在中文Telegram中，他消息末尾单独的")"通常表示微笑/轻松友好，而不是冷淡或"没兴趣"。不要仅因为")"就提高annoyance/cringe。
+- 如果阶段是"tg-given-cold"且消息无聊/含糊——大概率ignore或left-on-read。
+- 如果消息尴尬/有毒/越界——annoyance上升，可能是ignore或leave-chat。
+- 如果在温暖阶段内容可爱/得体——interest和attraction +。
+- 他发了长篇大论——她回复的bubbles不会更多；反而更少。
+- moodDelta: 小数字 -10..+10。
+- 反应——2026年真实女生更多使用TG表情反应而非在文字中用表情。如果消息引起了注意但不想回复——"intent":"reaction-only", "shouldReply":false, "reaction":"..."。默认reaction=""。
+- 重要: 反应必须符合她的态度。有好感的不会对梗图发 🤡——她会发 😂/❤ 或用文字可爱地笑。冷淡的不会发 ❤。
+- 不要用markdown包裹。只有JSON。`;
 
 export async function behaviorTick(
   llm: LLMClient,
@@ -121,7 +121,7 @@ export async function behaviorTick(
   const reactionsHint = reactionMenu(cfg.stage, rel.score);
 
   const history = recentHistory.slice(-8)
-    .map(m => `${m.role === "user" ? "он" : "она"}: ${m.content}`).join("\n");
+    .map(m => `${m.role === "user" ? "他" : "她"}: ${m.content}`).join("\n");
 
   if (ctx.activeDialog && !ctx.conflictColdActive) {
     const bubbles = sampleBubbles(communication, true);
@@ -137,7 +137,7 @@ export async function behaviorTick(
     };
   }
 
-  // базовая защита: если cold-период активный — обходим LLM, сразу ignore с шансом 80%
+  // 基础保护: 如果冷淡期活跃——绕过LLM，以80%概率直接ignore
   if (ctx.conflictColdActive && Math.random() < 0.8) {
     return {
       shouldReply: false,
@@ -151,10 +151,10 @@ export async function behaviorTick(
     };
   }
 
-  // warm vibe — снижает шанс случайного игнора
+  // warm vibe——降低随机无视概率
   const ignoreMul = ignoreMultiplier(communication, ignoreTendency);
 
-  // если СПИТ — игнор почти всегда
+  // 如果正在睡觉——几乎总是无视
   const sleepIgnoreMul = communication.notifications === "priority" ? 0.8 : communication.notifications === "muted" ? 1 : 0.9;
   if (ctx.presence?.asleep && !ctx.presence.nightAwake && Math.random() < 0.85 * sleepIgnoreMul) {
     return {
@@ -169,9 +169,9 @@ export async function behaviorTick(
     };
   }
 
-  // НОЧНОЕ ПРОБУЖДЕНИЕ: медленно, коротко, может снова заснуть
+  // 夜间醒来: 慢，短，可能再次睡着
   if (ctx.presence?.nightAwake) {
-    // 15% шанс просто игнорировать — снова уснула (снижено с 40%)
+    // 15%概率直接无视——又睡着了（从40%下调）
     if (Math.random() < 0.15) {
       return {
         shouldReply: false,
@@ -184,7 +184,7 @@ export async function behaviorTick(
         intent: "ignore"
       };
     }
-    // Иначе ответ — но короткий и медленный
+    // 否则回复——但简短且慢
     const parsed = await llm.chat(
       [{ role: "system", content: SYS }, { role: "user", content: TEMPLATE(state, history, incoming, ctx, reactionsHint) }],
       { temperature: 0.7, maxTokens: 3500, json: true }
@@ -210,7 +210,7 @@ export async function behaviorTick(
     );
     const parsed = JSON.parse(raw);
 
-    // Sanitize реакцию по правилам warm/cold
+    // 根据warm/cold规则清理反应
     let reaction: string | undefined = typeof parsed.reaction === "string" && parsed.reaction.length > 0 && parsed.reaction.length <= 4
       ? parsed.reaction : undefined;
     if (reaction) {
@@ -269,7 +269,7 @@ function sanitizeReaction(emoji: string, stage: string, score: { attraction: num
   const FORBIDDEN_WHEN_WARM = new Set(["🤡", "💀", "🤮", "🖕", "😐", "🙄"]);
   const FORBIDDEN_WHEN_COLD = new Set(["❤", "❤️", "🥰", "🥹", "🥺", "🔥"]);
   if (isWarm && FORBIDDEN_WHEN_WARM.has(emoji)) {
-    // подменяем на адекватную тёплую
+    // 替换为合适的温暖表情
     return ["😂", "❤", "🥹"][Math.floor(Math.random() * 3)];
   }
   if (isCold && FORBIDDEN_WHEN_COLD.has(emoji)) {

@@ -3,17 +3,17 @@
 @import url("https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;700;900&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap");
 
 :root {
-  /* === Палитра (light by default — bone) === */
-  --bone: #ECE7DA;        /* основной светлый фон */
-  --bone2: #E3DDCD;       /* карточки/панели — чуть теплее */
-  --ink: #0C0A06;         /* тёмный текст, "терминальные" панели */
-  --accent: #E8412A;      /* главный акцент, CTA, "живой" красный */
-  --accent2: #C4DC3C;     /* вторичный акцент, success/active */
-  --accent3: #FF7351;     /* warning/hover/press */
-  --muted: #6F6957;       /* второстепенный текст */
-  --line: #CDC6B1;        /* линии, бордеры */
+  /* === 调色板（默认浅色 — bone） === */
+  --bone: #ECE7DA;        /* 主浅色背景 */
+  --bone2: #E3DDCD;       /* 卡片/面板 — 稍暖调 */
+  --ink: #0C0A06;         /* 深色文本，"终端"面板 */
+  --accent: #E8412A;      /* 主强调色, CTA, "鲜活"红色 */
+  --accent2: #C4DC3C;     /* 次要强调色, 成功/激活 */
+  --accent3: #FF7351;     /* 警告/悬停/按下 */
+  --muted: #6F6957;       /* 次要文本 */
+  --line: #CDC6B1;        /* 线条、边框 */
 
-  /* === Алиасы для совместимости со старыми классами === */
+  /* === 与旧类兼容的别名 === */
   --ga-bg: var(--bone);
   --ga-bg-2: var(--bone2);
   --ga-bg-glass: rgba(236, 231, 218, 0.86);
@@ -38,17 +38,17 @@
   --ga-spring-fast: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ga-spring: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* === Шрифты === */
-  --font-display: "Unbounded", "Onest", system-ui, sans-serif;  /* большие заголовки, бренд */
-  --font-ui: "Onest", "Inter", system-ui, -apple-system, sans-serif; /* UI текст */
-  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, "Cascadia Code", Menlo, monospace; /* код, лог */
+  /* === 字体 === */
+  --font-display: "Unbounded", "Onest", system-ui, sans-serif;  /* 大标题、品牌 */
+  --font-ui: "Onest", "Inter", system-ui, -apple-system, sans-serif; /* 界面文本 */
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, "Cascadia Code", Menlo, monospace; /* 代码、日志 */
   --font-serif: "Instrument Serif", Georgia, serif; /* italic accents */
   --ga-font: var(--font-ui);
   --ga-font-mono: var(--font-mono);
 }
 
 [data-theme="dark"] {
-  /* Тёмная тема — ink-doминанта с акцентом-красным */
+  /* 深色主题 — ink 为主，红色强调 */
   --bone: #0C0A06;
   --bone2: #16130C;
   --ink: #ECE7DA;
@@ -69,9 +69,9 @@
   --ga-border-strong: rgba(236, 231, 218, 0.24);
 }
 
-/* Совместимость со старой логикой: data-theme="light" — это bone и так по дефолту. */
+/* 与旧逻辑兼容：data-theme="light" — 默认即为 bone。 */
 [data-theme="light"] {
-  /* Уже задано в :root — этот блок оставлен для совместимости. */
+  /* 已在 :root 中定义 — 此块保留用于兼容。 */
 }
 
 * { box-sizing: border-box; }

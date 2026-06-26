@@ -1,30 +1,30 @@
 import type { TelegramProxyConfig } from "../types.js";
 
 /**
- * Парсит строку прокси в TelegramProxyConfig.
+ * 将代理字符串解析为 TelegramProxyConfig。
  *
- * Поддерживает форматы (как и docs):
+ * 支持的格式（与文档一致）:
  * - `tg://proxy?server=...&port=...&secret=...` → MTProxy
  * - `https://t.me/proxy?server=...&port=...&secret=...` → MTProxy
  * - `socks5://[user:pass@]host:port` → SOCKS5
  * - `socks4://host:port` → SOCKS4
- * - голый `host:port` → SOCKS5 (популярный краткий формат)
+ * - 纯 `host:port` → SOCKS5（常用简写格式）
  *
- * Если на вход уже пришёл объект TelegramProxyConfig — возвращает его как есть.
- * Это нужно потому что UI исторически слал прокси строкой, а runtime ожидает объект.
+ * 如果输入已经是 TelegramProxyConfig 对象 — 原样返回。
+ * 这是因为 UI 历史上以字符串形式发送代理，而运行时需要对象。
  */
 export function parseTelegramProxyInput(
   raw: string | TelegramProxyConfig | undefined | null
 ): TelegramProxyConfig | undefined {
   if (raw == null) return undefined;
 
-  // Уже объект — нормализуем поля.
+  // 已是对象 — 归一化字段。
   if (typeof raw === "object") {
     if (!raw.ip || !raw.port) return undefined;
     if (raw.MTProxy && raw.secret) {
       return { ip: raw.ip, port: raw.port, MTProxy: true, secret: raw.secret, timeout: raw.timeout };
     }
-    // SOCKS — без явного socksType считаем 5 (sensible default).
+    // SOCKS — 未指定 socksType 时默认为 5（合理的默认值）。
     const socksType = raw.socksType === 4 ? 4 : 5;
     return {
       ip: raw.ip,
@@ -39,10 +39,10 @@ export function parseTelegramProxyInput(
   const trimmed = raw.trim();
   if (!trimmed) return undefined;
 
-  // Попытка 1: распарсить как URL.
+  // 尝试 1: 按 URL 解析。
   try {
     const url = new URL(trimmed);
-    // MTProxy: tg://proxy?... или https://t.me/proxy?...
+    // MTProxy: tg://proxy?... 或 https://t.me/proxy?...
     const isMtproxy =
       (url.protocol === "tg:" && url.hostname === "proxy") ||
       (/^https?:$/.test(url.protocol) && url.hostname === "t.me" && url.pathname.replace(/^\//, "") === "proxy");
@@ -67,10 +67,10 @@ export function parseTelegramProxyInput(
     }
     return undefined;
   } catch {
-    // не URL — пробуем host:port
+    // 不是 URL — 尝试 host:port
   }
 
-  // Попытка 2: голый host:port (SOCKS5 по умолчанию).
+  // 尝试 2: 纯 host:port（默认 SOCKS5）。
   const [host, portRaw] = trimmed.split(":");
   const port = Number(portRaw);
   if (!host || !Number.isInteger(port) || port <= 0) return undefined;

@@ -6,11 +6,11 @@ import { checkForPendingMigrations, runMigrations, formatUpdateWarnings } from "
 import { makeLLM } from "../llm/index.js";
 
 /**
- * RuntimeBus — оркестратор runtime'ов агента для WebUI.
+ * RuntimeBus — WebUI 代理运行时的编排器。
  *
- * Один процесс girl-agent держит несколько профилей. Бэкенд WebUI
- * стартует/гасит/перезапускает их по запросу фронта, держит ring-buffer
- * последних событий каждого профиля для catch-up при подключении WS.
+ * 一个 girl-agent 进程维护多个配置文件。WebUI 后端
+ * 根据前端请求启动/停止/重启它们，并为每个配置文件维护
+ * 最近事件的环形缓冲区，以便在 WS 连接时进行追赶同步。
  */
 export interface BufferedEvent extends RuntimeEvent {
   t: number;

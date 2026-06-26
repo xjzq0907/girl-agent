@@ -6,13 +6,13 @@ import type { ProfileConfig, RelationshipScore } from "../types.js";
 import { normalizeCommunicationProfile, normalizeIgnoreTendency } from "../presets/communication.js";
 
 /**
- * Корневая директория профилей.
+ * 配置文件根目录。
  *
- * Можно переопределить через `GIRL_AGENT_DATA` (используется десктоп-обвязкой,
- * чтобы хранить данные в `%APPDATA%/girl-agent/data` или `~/.local/share/...`).
- * По-умолчанию:
- * - в исходниках проекта — `./data`;
- * - при запуске через npx/глобальный бинарь из произвольной папки — XDG data dir.
+ * 可通过 `GIRL_AGENT_DATA` 覆盖（由桌面包装层使用，
+ * 将数据存储在 `%APPDATA%/girl-agent/data` 或 `~/.local/share/...`）。
+ * 默认：
+ * - 项目源码中 — `./data`；
+ * - 通过 npx/全局二进制从任意文件夹运行时 — XDG data dir。
  */
 export const DATA_ROOT = process.env.GIRL_AGENT_DATA
   ? path.resolve(process.env.GIRL_AGENT_DATA)
@@ -32,15 +32,15 @@ function defaultDataRoot(): string {
   const cwd = process.cwd();
   const projectData = path.resolve(cwd, "data");
   if (looksLikeProjectRoot(cwd) && canWriteDir(path.dirname(projectData))) return projectData;
-  // Issue #72: на Windows храним в %APPDATA%\\girl-agent\\data — это ожидаемое
-  // место для конфига npm-приложений, при отсутствии XDG.
+  // Issue #72: 在 Windows 上存储在 %APPDATA%\\girl-agent\\data — 这是
+  // 没有 XDG 时 npm 应用的预期配置位置。
   if (process.platform === "win32") {
     const appdata = process.env.APPDATA
       ? path.resolve(process.env.APPDATA)
       : path.join(os.homedir(), "AppData", "Roaming");
     return path.join(appdata, "girl-agent", "data");
   }
-  // macOS: ~/Library/Application Support/girl-agent/data (если не задан XDG)
+  // macOS: ~/Library/Application Support/girl-agent/data（如果未设置 XDG）
   if (process.platform === "darwin" && !process.env.XDG_DATA_HOME) {
     return path.join(os.homedir(), "Library", "Application Support", "girl-agent", "data");
   }
@@ -124,7 +124,7 @@ export async function writeConfig(cfg: ProfileConfig): Promise<void> {
 
 export async function deleteProfile(slug: string): Promise<void> {
   if (!slug || slug.includes("/") || slug.includes("\\") || slug === "." || slug === "..") {
-    throw new Error(`некорректный slug профиля: ${slug}`);
+    throw new Error(`无效的配置文件 slug: ${slug}`);
   }
   await fs.rm(profileDir(slug), { recursive: true, force: true });
 }
@@ -160,7 +160,7 @@ export async function listProfiles(): Promise<string[]> {
 export function slugify(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-zа-я0-9]+/gi, "-")
+    .replace(/[^a-z0-9\u4e00-\u9fff]+/gi, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 40) || `profile-${Date.now().toString(36)}`;
 }
@@ -208,18 +208,18 @@ export async function writeRelationship(slug: string, state: RelationshipState):
 }
 
 /**
- * Депрекейтед: раньше эта функция использовала UTC, из-за чего время в логах отличалось
- * от daily-life/agenda/memory (Issue #78). Теперь она просто прокси на appendSessionLog
- * с дефолтной tz Europe/Moscow (совместимость для старых call-sites без tz).
+ * 已弃用：此函数之前使用 UTC，导致日志时间与 daily-life/agenda/memory
+ * 不一致（Issue #78）。现在它只是 appendSessionLog 的代理，
+ * 使用默认时区 Europe/Moscow（兼容旧的没有 tz 参数的调用点）。
  */
 export async function appendDayLog(slug: string, line: string, tz = "Europe/Moscow"): Promise<void> {
   await appendSessionLog(slug, tz, line);
 }
 
 /**
- * Возвращает строку YYYY-MM-DD для "сессионного дня".
- * Сессионный день — это её локальная дата, но если время от 00:00 до 04:59 — относится к ПРЕДЫДУЩЕМУ дню.
- * Это нужно чтобы переписка в 23:59 → 00:30 не разрывалась на два файла.
+ * 返回"会话日"的 YYYY-MM-DD 字符串。
+ * 会话日是她本地的日期，但如果时间在 00:00 到 04:59 之间 — 则属于前一天。
+ * 这是为了避免 23:59 → 00:30 的对话被分割到两个文件中。
  */
 export function sessionDate(tz: string, now = new Date()): string {
   let y: number, mo: number, d: number, h: number;
@@ -235,7 +235,7 @@ export function sessionDate(tz: string, now = new Date()): string {
     y = now.getUTCFullYear(); mo = now.getUTCMonth() + 1; d = now.getUTCDate(); h = now.getUTCHours();
   }
   if (h < 5) {
-    // на день назад
+    // 回退一天
     const prev = new Date(Date.UTC(y, mo - 1, d));
     prev.setUTCDate(prev.getUTCDate() - 1);
     return prev.toISOString().slice(0, 10);
@@ -243,7 +243,7 @@ export function sessionDate(tz: string, now = new Date()): string {
   return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-/** Аппенд в session-aware дневник. Используй вместо appendDayLog. */
+/** 追加到会话感知日记。请使用此函数代替 appendDayLog。 */
 export async function appendSessionLog(slug: string, tz: string, line: string, fromId?: number): Promise<void> {
   const day = sessionDate(tz);
   const suffix = fromId ? ` ${fromMarker(fromId)}` : "";
@@ -277,7 +277,7 @@ export async function searchSharedMemory(slug: string, query: string, limit = 8)
   return (hits.length ? hits : lines).slice(-limit).join("\n");
 }
 
-/** Список всех session-дней в порядке возрастания */
+/** 按升序排列的所有会话日列表 */
 export async function listSessionDays(slug: string): Promise<string[]> {
   try {
     const dir = path.join(profileDir(slug), "log");
@@ -289,7 +289,7 @@ export async function listSessionDays(slug: string): Promise<string[]> {
   } catch { return []; }
 }
 
-/** Daily summary (генерится по итогам сессии) */
+/** 每日摘要（由会话结束后生成） */
 export async function readDailySummary(slug: string, day: string): Promise<string> {
   return stripLogMetadata(await readMd(slug, `memory/daily/${day}.md`));
 }
@@ -309,7 +309,7 @@ export async function listDailySummaries(slug: string): Promise<string[]> {
   } catch { return []; }
 }
 
-/** Простой поиск по всем daily summaries (substring + word match). Возвращает топ-N релевантных дней. */
+/** 在所有每日摘要中进行简单搜索（子字符串 + 单词匹配）。返回最相关的前 N 天。 */
 export async function searchDailySummaries(slug: string, query: string, limit = 5): Promise<{ day: string; excerpt: string; score: number }[]> {
   const days = await listDailySummaries(slug);
   if (!days.length) return [];
@@ -325,7 +325,7 @@ export async function searchDailySummaries(slug: string, query: string, limit = 
       score += matches;
     }
     if (score > 0) {
-      // короткий excerpt: первая строка содержащая токен
+      // 简短摘录：包含 token 的第一行
       const lineMatch = txt.split("\n").find(l => tokens.some(t => l.includes(t))) ?? txt.slice(0, 200);
       out.push({ day, excerpt: lineMatch.slice(0, 240), score });
     }
@@ -334,7 +334,7 @@ export async function searchDailySummaries(slug: string, query: string, limit = 
   return out.slice(0, limit);
 }
 
-/** Прочитать весь сырой лог одного session-дня */
+/** 读取一个会话日的完整原始日志 */
 export async function readSessionLog(slug: string, day: string): Promise<string> {
   return readMd(slug, `log/${day}.md`);
 }
@@ -344,7 +344,7 @@ export function parseSessionLogTurns(raw: string, fromId?: number, limit = 30): 
   let currentChatMatches = fromId == null;
   for (const line of raw.split(/\r?\n/)) {
     const clean = stripLogMetadata(line);
-    const user = clean.match(/^\[(.+?)\]\s+он\((\d+)\):\s*(.*)$/);
+    const user = clean.match(/^\[(.+?)\]\s+他\((\d+)\):\s*(.*)$/);
     if (user) {
       currentChatMatches = fromId == null || Number(user[2]) === fromId;
       if (currentChatMatches) {
@@ -352,7 +352,7 @@ export function parseSessionLogTurns(raw: string, fromId?: number, limit = 30): 
       }
       continue;
     }
-    const assistant = clean.match(/^\s*->\s+(?:\[proactive\]\s+)?она:\s*(.*)$/);
+    const assistant = clean.match(/^\s*->\s+(?:\[proactive\]\s+)?她:\s*(.*)$/);
     if (assistant && currentChatMatches) {
       turns.push({ role: "assistant", content: stripLogMetadata(assistant[1] ?? "") });
     }
@@ -388,16 +388,16 @@ export async function readRecentSessionTurns(slug: string, tz: string, fromId?: 
 
 export interface AgendaItem {
   id: string;                  // unique id
-  about: string;               // короткое описание события юзера ("соревнования по плаванию")
-  userEventTime?: string;      // ISO when user's event happens (если известно)
+  about: string;               // 用户事件的简短描述（"游泳比赛"）
+  userEventTime?: string;      // ISO 格式的用户事件发生时间（如果已知）
   pingAt: string;              // ISO when she should ping
-  reason: string;              // почему пишет ("узнать как прошло", "пожелать удачи")
-  importance: 1 | 2 | 3;       // 1=обычное любопытство, 3=сильно переживает
+  reason: string;              // 为什么要发消息（"问问进展如何", "祝好运"）
+  importance: 1 | 2 | 3;       // 1=普通好奇, 3=非常关心
   state: "pending" | "fired" | "cancelled" | "rescheduled";
-  attempts: number;            // сколько раз уже пинговала (для перепланировки)
-  chatId: string | number;     // чат куда писать
+  attempts: number;            // 已经 ping 了多少次（用于重新调度）
+  chatId: string | number;     // 要发送到的聊天
   createdAt: string;
-  history?: string[];          // лог событий по item ("user said отстань at ...")
+  history?: string[];          // 项目事件日志（"用户在某时说 别烦我 ..."）
 }
 
 export async function readAgenda(slug: string): Promise<AgendaItem[]> {

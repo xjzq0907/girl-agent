@@ -1,33 +1,33 @@
-// Симуляция онлайн-поведения. Каждая девушка имеет свой паттерн заходов в тг.
-// Используется для реалистичных задержек ответа и для решения "она не онлайн прям сейчас".
+// 在线行为模拟。每个女孩有自己的 TG 上线模式。
+// 用于实现真实的回复延迟，以及解决"她此刻不在线"的问题。
 
 import type { BusySlot, CommunicationProfile, ProfileConfig, StageId, Weekday } from "../types.js";
 import type { ConflictState } from "./conflict.js";
 import { normalizeCommunicationProfile } from "../presets/communication.js";
 
 export type PresencePattern =
-  | "phone-attached"   // телефон в руке почти всегда. отвечает быстро. бывает сон/работа
-  | "burst-checker"    // заходит каждые 15-30 мин на 2-5 мин и снова уходит
-  | "rare-checker"     // раз в 1-2 часа, иногда забывает
-  | "evening-only"     // днём занята (работа/универ), активна с 18:00
-  | "phone-attached-night"; // сова, активна 22:00-04:00, днём вяло
+  | "phone-attached"   // 手机几乎不离手。回复很快。只有睡觉/工作时离线
+  | "burst-checker"    // 每15-30分钟上线看2-5分钟，然后再次离开
+  | "rare-checker"     // 每1-2小时看一次，有时会忘
+  | "evening-only"     // 白天在忙（工作/大学），18:00之后才活跃
+  | "phone-attached-night"; // 夜猫子，22:00-04:00活跃，白天无精打采
 
 export interface PresenceProfile {
   pattern: PresencePattern;
-  /** Часы сна в её локальном tz (от и до, может пересекать полночь). Берутся из профиля. */
+  /** 她当地时区的睡眠时间段（起止，可能跨越午夜）。从配置文件中获取。 */
   sleepFrom: number; // 0..23
   sleepTo: number;   // 0..23
-  /** Средний интервал между заходами (мин) */
+  /** 平均上线间隔（分钟） */
   checkEveryMin: number;
-  /** Сколько минут она "онлайн" за один заход */
+  /** 每次上线保持"在线"的分钟数 */
   onlineWindowMin: number;
-  /** Базовая вероятность ответить если она оффлайн (через пинг-уведомление) */
+  /** 离线时回复消息的基础概率（通过推送通知） */
   offlineReplyChance: number; // 0..1
-  /** Вероятность проснуться ночью на входящее */
+  /** 夜间被消息唤醒的概率 */
   nightWakeChance: number;
 }
 
-/** Детерминированный профиль присутствия из имени-сида и персоны. Часы сна берутся из профиля. */
+/** 根据姓名种子和人物设定，确定性地生成存在模式配置。睡眠时间从配置文件中获取。 */
 export function computePresenceProfile(cfg: ProfileConfig): PresenceProfile {
   const seed = [...cfg.name].reduce((a, c) => a + c.charCodeAt(0), 0) + cfg.age;
   const r = (n: number) => ((seed * 9301 + n * 49297) % 233280) / 233280;
@@ -94,17 +94,17 @@ export function computePresenceProfile(cfg: ProfileConfig): PresenceProfile {
 }
 
 export interface PresenceState {
-  /** Прямо сейчас она "онлайн в тг" с точки зрения симуляции */
+  /** 此刻从模拟角度看，她是否"在 TG 在线" */
   online: boolean;
-  /** Спит ли */
+  /** 是否在睡觉 */
   asleep: boolean;
-  /** Проснулась ли ночью (forced или по шансу) — влияет на стиль ответа */
+  /** 夜间是否被唤醒（强制或随机）——影响回复风格 */
   nightAwake: boolean;
-  /** Через сколько секунд она в следующий раз зайдёт в тг (если оффлайн) */
+  /** 距离她下次上线看 TG 还有多少秒（如果当前离线） */
   nextCheckSec: number;
-  /** Локальный час по её tz */
+  /** 她时区的本地小时数 */
   localHour: number;
-  /** Текстовое описание для prompt */
+  /** 用于 prompt 的文本描述 */
   hint: string;
   busy?: { label: string; until: string; checkAfterMin: number };
   notificationSeen: boolean;
@@ -192,8 +192,8 @@ function randomCheckAfter(slot: BusySlot): number {
 }
 
 /**
- * Решает, нужно ли предупредить собеседника об уходе при переходе в busy-слот
- * посреди активного диалога. Возвращает hint-строку или null если молча уходит.
+ * 判断在活跃对话中，进入忙时槽位是否应该提醒对话对象。
+ * 返回提示字符串，如果直接沉默离开则返回 null。
  */
 function busyTransitionHint(
   stage: StageId,
@@ -202,7 +202,7 @@ function busyTransitionHint(
   checkAfterMin: number,
   recentExchangeCount: number
 ): string | null {
-  // --- базовая вероятность по стадии отношений ---
+  // --- 根据关系阶段的基础概率 ---
   const stageChance: Record<StageId, number> = {
     "met-irl-got-tg": 0.05,
     "tg-given-cold": 0.08,
@@ -216,7 +216,7 @@ function busyTransitionHint(
   };
   let chance = stageChance[stage] ?? 0.3;
 
-  // --- модификатор от стиля общения ---
+  // --- 沟通风格的修正 ---
   if (comm.initiative === "high") chance += 0.15;
   else if (comm.initiative === "low") chance -= 0.15;
 
@@ -225,39 +225,39 @@ function busyTransitionHint(
 
   if (comm.lifeSharing === "high") chance += 0.05;
 
-  // --- модификатор от продолжительности занятости ---
+  // --- 根据忙碌时长的修正 ---
   if (remainingMin <= 10) chance -= 0.20;
   else if (remainingMin <= 20) chance -= 0.05;
   else if (remainingMin >= 90) chance += 0.15;
   else if (remainingMin >= 45) chance += 0.08;
 
-  // --- модификатор от серьёзности занятости ---
+  // --- 根据任务重要程度的修正 ---
   if (checkAfterMin >= 30) chance += 0.15;
   else if (checkAfterMin >= 15) chance += 0.05;
   else if (checkAfterMin <= 8) chance -= 0.10;
 
-  // --- модификатор от интенсивности диалога ---
+  // --- 根据对话强度的修正 ---
   if (recentExchangeCount >= 6) chance += 0.10;
   else if (recentExchangeCount >= 4) chance += 0.05;
 
   chance = Math.max(0, Math.min(1, chance));
   if (Math.random() >= chance) return null;
 
-  // --- стиль предупреждения зависит от стадии и персоны ---
+  // --- 提醒风格取决于关系阶段和人格 ---
   const isClose = ["dating-early", "dating-stable", "long-term"].includes(stage);
   const isWarm = comm.initiative === "high" || comm.lifeSharing === "high";
   const isCold = comm.initiative === "low" && comm.messageStyle === "one-liners";
 
   if (isCold) {
-    return `ПЕРЕХОД В ЗАНЯТОСТЬ: у вас был активный диалог, но начинается ${remainingMin > 30 ? "долгое" : "короткое"} дело. Предупреди КРАТКО и сухо, в своём стиле — одно-два слова ("ушла", "потом", "занята"). Не объясняй подробно.`;
+    return `进入忙时状态：你刚才在活跃对话中，但现在要开始${remainingMin > 30 ? "比较长时间" : "短时间"}的忙碌。简单冷淡地提醒一下，按你的人设风格——就一两个字（"忙"、"回头"、"有事"）。不用解释太多。`;
   }
   if (isClose && isWarm) {
-    return `ПЕРЕХОД В ЗАНЯТОСТЬ: у вас был активный диалог, но начинается занятие. Предупреди его тепло и естественно, в стиле вашей близости (например: "малыш мне надо бежать на ${remainingMin > 45 ? "пару часов" : "немного"}, потом напишу" или "я по делам, скучай"). Стиль зависит от persona.`;
+    return `进入忙时状态：你刚才在活跃对话中，但现在要做其他事情了。用亲切自然的方式提醒他，以你们亲密关系的口吻（比如："宝贝我要去忙${remainingMin > 45 ? "一会儿" : "一下下"}，回头找你"或"我有点事去，要乖哦"）。风格参考你的persona。`;
   }
   if (isClose) {
-    return `ПЕРЕХОД В ЗАНЯТОСТЬ: у вас был активный диалог, но начинается занятие. Предупреди естественно (например: "мне надо отойти, позже напишу" или "я занята буду ${remainingMin > 45 ? "пару часов" : "немного"}, потом отвечу").`;
+    return `进入忙时状态：你刚才在活跃对话中，但现在要做其他事情了。自然地提醒一下（比如："我得走开一下，等下回复你"或"我要忙${remainingMin > 45 ? "一阵" : "一会"}了，晚点回你"）。`;
   }
-  return `ПЕРЕХОД В ЗАНЯТОСТЬ: у вас был активный диалог, но начинается дело. Можешь коротко предупредить об уходе (например: "я побежала, потом отвечу" или "мне пора, позже"). Стиль зависит от уровня ваших отношений и persona.`;
+  return `进入忙时状态：你刚才在活跃对话中，但现在要到其他事情了。可以简单提醒一下要走了（比如："我先走了，回头聊"或"我该走了，等一下回你哈"）。风格取决于你们的关系阶段和persona。`;
 }
 
 export function computePresenceState(
@@ -278,13 +278,13 @@ export function computePresenceState(
   const asleep = isHourInRange(localHour, profile.sleepFrom, profile.sleepTo);
   const busySlot = asleep ? null : activeBusySlot(cfg.busySchedule, local.weekday, minuteOfDay);
 
-  // Проверка cold-периода конфликта
+  // 检查冲突的冷处理期
   const conflictCold = conflict && conflict.coldUntil ? new Date(conflict.coldUntil).getTime() > Date.now() : false;
 
-  // Ночное пробуждение: forced или случайное по шансу (forced работает всегда, случайный только если asleep)
+  // 夜间唤醒：强制唤醒或随机概率（强制唤醒始终有效，随机只在睡着时触发）
   const nightAwake = forcedWake || (asleep && Math.random() < profile.nightWakeChance);
 
-  // Активный диалог: за последние 30 мин было >=3 обмена и последняя её реплика свежая
+  // 活跃对话：最近30分钟至少3个来回，且她最后一条回复还算新鲜
   const now = Date.now();
   const inActiveDialog = recentExchangeCount >= 3
     && lastHerReplyTs > 0
@@ -296,17 +296,17 @@ export function computePresenceState(
   let busy: PresenceState["busy"] | undefined;
   let notificationSeen = false;
 
-  // Если cold-период конфликта активен — она не онлайн
+  // 如果冲突冷处理期激活——她不在线
   if (conflictCold && !forcedWake) {
     online = false;
     const remainingMs = new Date(conflict!.coldUntil!).getTime() - now;
     nextCheckSec = Math.max(60, Math.floor(remainingMs / 1000));
   } else if (asleep && !nightAwake) {
     online = false;
-    // следующий чек = до утра + случайные 0-30 мин
+    // 下次检查 = 直到早上 + 随机 0-30 分钟
     let hoursToWake = profile.sleepTo - localHour;
     if (hoursToWake < 0) hoursToWake += 24;
-    // если проснулась прямо сейчас (sleepTo == localHour), чек через ~30 мин
+    // 如果此刻刚好该醒了（sleepTo == localHour），约30分钟后检查
     if (hoursToWake === 0) hoursToWake = 0.5;
     nextCheckSec = Math.floor(hoursToWake * 3600) + Math.floor(Math.random() * 1800);
   } else if (busySlot && !forcedWake) {
@@ -316,7 +316,7 @@ export function computePresenceState(
     const minCheck = Math.max(1, Math.round(rawMinCheck * busyMul * activeDialogMul));
     const maxCheck = Math.max(minCheck, Math.round(rawMaxCheck * busyMul * activeDialogMul));
     if (maxCheck <= 5) {
-      // Скучное занятие — мини-заходы в Telegram каждые 1-5 минут на 30-90 секунд
+      // 无聊的任务——每隔1-5分钟快速刷一下Telegram，持续30-90秒
       const cycleMin = Math.max(1, Math.round((minCheck + maxCheck) / 2));
       const minuteOfCycle = minuteOfDay % Math.max(1, cycleMin);
       const onlineMin = Math.max(1, Math.min(2, Math.floor(cycleMin / 2)));
@@ -354,7 +354,7 @@ export function computePresenceState(
       const capMin = communication.notifications === "priority" ? 15 : communication.initiative === "high" ? 30 : 75;
       nextCheckSec = Math.min(minutesToNight, capMin) * 60 + Math.floor(Math.random() * 600);
     } else {
-      // Использую псевдо-случайный окно: вероятность что СЕЙЧАС в окне = onlineWindow / (onlineWindow + checkEvery)
+      // 使用伪随机窗口：此刻在窗口内的概率 = onlineWindow / (onlineWindow + checkEvery)
       const onlineProb = profile.onlineWindowMin / (profile.onlineWindowMin + profile.checkEveryMin);
       online = Math.random() < onlineProb;
       if (!online) {
@@ -366,22 +366,22 @@ export function computePresenceState(
     }
   }
 
-  // Хинт для prompt
+  // prompt 提示语
   let hint: string;
   if (forcedWake) {
-    hint = `FORCED WAKE — ты получила уведомление/разбудили. Отвечай, даже если обычно спишь или занята. Не упоминай что тебя "разбудили", просто отвечай как обычно.`;
+    hint = `强制唤醒——你收到了通知/被叫醒了。即使平时在睡觉或忙碌，也要回复。不要提你被"叫醒"了，像平时一样正常回复就好。`;
   } else if (conflictCold && !forcedWake && conflict) {
     const hoursLeft = Math.ceil((new Date(conflict.coldUntil!).getTime() - now) / 3600_000);
-    hint = `КОНФЛИКТ (level ${conflict.level}). Ты в режиме молчания. Осталось ~${hoursLeft}ч игнора. Отвечай очень редко, сухо: ".", "и?", "ну?", "что". Никаких смайликов, скобок ")" нет вообще. Можно вообще игнорить. Простить можешь только если ОН реально извинится по существу.`;
+    hint = `冷战/闹别扭中 (等级 ${conflict.level})。你处于沉默模式。还剩约${hoursLeft}小时的冷处理时间。回复极简、冷淡：".", "哦", "嗯", "然后呢"。不用任何表情包，不用"）"括号。可以完全不回。只有当他真正诚恳道歉的时候才可能原谅。`;
   } else if (asleep && !nightAwake) {
-    hint = `СПИШЬ (по местному ${localHour}:00). Если отвечаешь — то заспанно, односложно, либо вообще игнорь до утра.`;
+    hint = `正在睡觉（当地时间 ${localHour}:00）。如果回复了，那就是迷迷糊糊的、只言片语，要么干脆不理到早上。`;
   } else if (nightAwake) {
-    hint = `НОЧНОЕ ПРОБУЖДЕНИЕ (по местному ${localHour}:00). Ты проснулась посреди ночи — возможно от уведомления, возможно сама. ГОЛОВА НЕ ВАРИТ. Пишешь очень коротко, с опечатками, без заглавных, дезориентирована. Можешь снова заснуть посреди фразы — тогда обрываешь. Не ведёшь длинные разговоры. Если не хочешь — просто "спи" или "потом".`;
+    hint = `半夜醒来（当地时间 ${localHour}:00）。你半夜醒了——也许是被通知吵醒，也许是自己醒了。脑子不清醒。回复很短、有错别字、不用大号字体、迷迷糊糊。可能说着说着又睡着了——那就戛然而止。不聊长话题。如果不想聊，一句"睡了"或"明天再说"。`;
   } else if (busy) {
     if ((busy.checkAfterMin ?? 15) <= 5) {
-      hint = `На ${busy.label} (до ${busy.until}), но скучно — периодически заходишь в Telegram между делом. Можешь быстро ответить, но можешь и пропустить момент.`;
+      hint = `正在${busy.label}（到${busy.until}），但比较无聊——抽空刷刷Telegram。可以快速回复，但也可能错过时机。`;
     } else {
-      hint = `Сейчас занята: ${busy.label} до ${busy.until}. Не можешь нормально отвечать. После этого зайдёшь проверить Telegram через ${busy.checkAfterMin} мин; сообщение будет прочитано и ответ будет только тогда.`;
+      hint = `现在正忙：${busy.label} 一直到 ${busy.until}。无法正常回复。之后会在${busy.checkAfterMin}分钟后打开Telegram查看；消息会被读到，回复也要等到那时。`;
       if (inActiveDialog && busySlot) {
         const notifyHint = busyTransitionHint(cfg.stage, communication, busySlot.remainingMin, busy.checkAfterMin ?? 15, recentExchangeCount);
         if (notifyHint) hint += "\n\n" + notifyHint;
@@ -389,17 +389,17 @@ export function computePresenceState(
     }
   } else if (online) {
     if (inActiveDialog) {
-      hint = `АКТИВНЫЙ ДИАЛОГ. Отвечаешь относительно быстро. Если резко "ушла" — ОБЯЗАТЕЛЬНО оправдание (мама зашла / в туалет / еду / котик прыгнул на колени). Внезапно "вышла из сети" без причин — это палево, не делай так.`;
+      hint = `活跃对话中。回复相对较快。如果你突然"消失了"——必须有借口（妈妈进来了 / 上厕所 / 拿吃的 / 猫猫跳到腿上了）。突然"离线"没有理由——这太假了，别这样。`;
     } else {
-      hint = `Сейчас в сети, но не залипала — просто заглянула в тг. Можешь зайти в диалог сразу или через 1-2 мин.`;
+      hint = `现在在线，但不沉迷——只是打开TG看了一眼。可以直接进入对话，或者等1-2分钟再回。`;
     }
   } else {
     hint = notificationSeen
-      ? `Сейчас НЕ в сети, но уведомление увидела. Зайдёшь в Telegram через ~${Math.round(nextCheckSec / 60)} мин и тогда ответишь, если захочешь.`
-      : `Сейчас НЕ в сети (паттерн: ${profile.pattern}). Уведомление не заметила; прочитаешь это через ~${Math.round(nextCheckSec / 60)} мин когда сама заглянешь в тг. Это нормально, реальные люди не сидят в тг 24/7.`;
+      ? `现在不在线，但看到了通知。大约${Math.round(nextCheckSec / 60)}分钟后会打开Telegram，如果愿意的话那时再回复。`
+      : `现在不在线（上线模式: ${profile.pattern}）。没注意到通知；大约${Math.round(nextCheckSec / 60)}分钟后，自己刷TG的时候才会看到这条消息。这很正常，现实中没人24小时守在TG上。`;
   }
   if (!conflictCold && !asleep && communication.notifications === "priority") {
-    hint += ` Уведомления от него у тебя важные, поэтому в активной переписке не пропадай рандомно.`;
+    hint += ` 他的通知对你很重要，所以聊得正热络的时候别无缘无故消失。`;
   }
 
   return { online, asleep, nightAwake, nextCheckSec, localHour, hint, busy, notificationSeen };

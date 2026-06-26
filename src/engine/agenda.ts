@@ -8,67 +8,67 @@ import type { ConflictState } from "./conflict.js";
 import { searchPalaceDrawers } from "./memory-palace.js";
 
 /**
- * Agenda engine — она ведёт mental note "у него завтра соревнования",
- * сама решает когда написать чтобы спросить, переносит если он шлёт нафиг.
+ * Agenda engine — 她会在心里记下"他明天有比赛"，
+ * 自己决定什么时候发消息问他，如果他叫滚就推迟。
  *
- * Состоит из:
- *   1. extractAgendaUpdates — после каждого user-сообщения LLM решает создавать/менять agenda items
- *   2. tickAgenda — каждые ~60с runtime проверяет какие пинговать сейчас
- *   3. handleResponseToProactive — когда юзер отвечает на её proactive ping, LLM решает «принято / отстань / поговорим»
+ * 由以下部分组成：
+ *   1. extractAgendaUpdates — 每次 user 消息后，LLM 决定是否创建/修改 agenda items
+ *   2. tickAgenda — 每 ~60 秒 runtime 检查现在该发哪些消息
+ *   3. handleResponseToProactive — 当用户回复她的主动消息时，LLM 决定「已收到 / 算了 / 再聊聊」
  */
 
 function agendaById(items: AgendaItem[]): Map<string, AgendaItem> {
   return new Map(items.map(item => [item.id, item]));
 }
 
-const SYS_EXTRACT = `Ты — модуль ассистента-девушки. Твоя задача: после каждого сообщения парня посмотреть, не упомянул ли он что-то про своё будущее (планы, события, дела, дедлайны, работу, соревнования, экзамены, поездки), на что ОНА бы переживала / хотела узнать / отметила про себя — как живой человек, не календарь. Также понять, есть ли у НЕЁ повод проактивно написать ему позже (без явного триггера от него).
+const SYS_EXTRACT = `你是女友助手的模块。你的任务：每次男生发消息后，看看他是否提到了自己的未来（计划、事件、事情、截止日期、工作、比赛、考试、旅行），有什么是她会担心/想知道/在心里记下的——像真实的人，不是日历。还要判断她有没有理由之后主动给他发消息（没有他明显的触发）。
 
-ВАЖНО:
-- Только реалистичное поведение. Не каждое его сообщение порождает agenda. Большинство — мимо.
-- На стадии "tg-given-cold" / "tg-given-warming" она почти ничего не запоминает и не пингует — сильно интересного для холодной девушки нет.
-- На "convinced" / "first-date-done" уже может проявить интерес.
-- На "dating-early"+ начинает реально переживать, спрашивает как прошло, поддерживает.
-- Если он сказал "у меня завтра соревнования" — она поставит mental note чтобы написать через ~1ч после начала ("ну как там").
-- Если сказал что-то нейтральное — не создавай agenda.
+重要：
+- 只表现真实的行为。不是他的每条消息都要创建 agenda。大多数——忽略。
+- 在 "tg-given-cold" / "tg-given-warming" 阶段，她几乎不记东西也不发消息——冷淡的女生没什么太感兴趣的。
+- 到了 "convinced" / "first-date-done" 阶段，她可能会表现出兴趣。
+- 到了 "dating-early"+ 阶段，她开始真正担心，会问结果怎么样，会支持他。
+- 如果他说"我明天有比赛"——她会在心里记下，在比赛开始后 ~1 小时发消息问"怎么样啦"。
+- 如果他说的是中性内容——不要创建 agenda。
 
-Действия:
-- "create" — новая запись в agenda
-- "update" — изменить существующую (по id)
-- "cancel" — отменить (например он передумал)
-- "noop" — ничего не делать (default!)`;
+操作：
+- "create" — agenda 中新添一条
+- "update" — 修改已有条目（按 id）
+- "cancel" — 取消（比如他改主意了）
+- "noop" — 什么都不做（默认！）`;
 
 const TEMPLATE_EXTRACT = (state: string, history: string, incoming: string, currentAgenda: AgendaItem[], nowISO: string, tz: string) => `${state}
 
-Сейчас (${tz}): ${nowISO}
+现在 (${tz}): ${nowISO}
 
-Текущая её agenda по нему (что она помнит / собирается):
-${currentAgenda.length ? JSON.stringify(currentAgenda.map(a => ({ id: a.id, about: a.about, pingAt: a.pingAt, state: a.state })), null, 2) : "(пусто)"}
+她当前关于他的 agenda（她记得/计划做的）：
+${currentAgenda.length ? JSON.stringify(currentAgenda.map(a => ({ id: a.id, about: a.about, pingAt: a.pingAt, state: a.state })), null, 2) : "（空）"}
 
-Последние сообщения:
+最近的消息：
 ${history}
 
-НОВОЕ сообщение от него:
+他的新消息：
 """${incoming}"""
 
-Верни СТРОГО JSON массив действий (чаще всего пустой):
+严格返回 JSON 动作数组（通常是空的）：
 [
   {
     "action": "create" | "update" | "cancel" | "noop",
-    "id"?: "string (для update/cancel)",
-    "about"?: "коротко что за событие у него",
-    "userEventTime"?: "ISO когда у НЕГО событие (если назвал время) или null",
-    "pingAt"?: "ISO когда ОНА планирует написать",
-    "reason"?: "почему она хочет написать (по-человечески, не сухо)",
+    "id"?: "string（用于 update/cancel）",
+    "about"?: "简短描述他有什么事件",
+    "userEventTime"?: "ISO 他的事件时间（如果他说了时间）或 null",
+    "pingAt"?: "ISO 她计划发消息的时间",
+    "reason"?: "她为什么想发消息（人性化，不要干巴巴）",
     "importance"?: 1|2|3
   }
 ]
 
-Правила:
-- Если "noop" — верни []
-- Не плоди дубликатов — если уже есть похожий item, лучше "update" чем "create"
-- pingAt — реалистично, не "ровно через час". Девушки не строго по будильнику. Прибавь 30-90 минут вариативности.
-- Если он явно просил "не пиши пока буду на работе/учёбе" — поставь pingAt после этого окна.
-- НЕ оборачивай в markdown. Только JSON.`;
+规则：
+- 如果是 "noop" — 返回 []
+- 不要重复创建——如果已有类似 item，优先 "update" 而不是 "create"
+- pingAt 要真实，不要"正好一小时后"。女生不会严格按照闹钟来。加 30-90 分钟的随机波动。
+- 如果他明确要求"我工作/学习时别发"——把 pingAt 设在这个时段之后。
+- 不要包在 markdown 里。只要 JSON。`;
 
 interface ExtractAction {
   action: "create" | "update" | "cancel" | "noop";
@@ -183,19 +183,19 @@ function sanitizeAutonomousItems(
   return out;
 }
 
-const SYS_AUTONOMOUS = `Ты — внутренний планировщик проактивности девушки. Она живёт свою жизнь и иногда сама пишет парню первой, не потому что он написал, а потому что вспомнила, соскучилась, раздражена, хочет поделиться мелочью, проверить где он, пожаловаться, подразнить, показать что ей не всё равно.
+const SYS_AUTONOMOUS = `你是女友主动行为的内部规划器。她过着自己的生活，有时会主动先给男生发消息，不是因为他发了消息，而是因为她想起来了、想他了、心情不好、想分享小事、想查岗他在哪、想抱怨、想逗他、想让他知道她在乎。
 
-Задача — создать реалистичные будущие поводы написать ему сегодня/завтра. Это НЕ календарь и НЕ ассистент. Это живая девушка.
+任务是创建今天/明天她主动发消息的真实理由。这不是日历，也不是助手。这是一个真实的女生。
 
-КРИТИЧНО: НЕ ПРИДУМЫВАЙ события и темы которых не было в переписке. Если ты ссылаешься на то что он рассказывал про X — проверь что X реально есть в переписке или long-term memory. Нельзя писать про тему которую вы НИКОГДА не обсуждали. Лучше пиши про свою жизнь (сегодняшний день, события из daily-life) чем ссылайся на несуществующий разговор.
+关键：不要编造聊天记录里没有的事件和话题。如果你提到他说过 X——确认 X 确实在聊天记录或 long-term memory 里。不能写你们从未讨论过的话题。最好写关于她自己的生活（今天、daily-life 里的事件），而不是引用不存在的对话。
 
-Верни СТРОГО JSON:
+严格返回 JSON：
 {
   "items": [
     {
-      "about": "коротко тема её будущего сообщения",
-      "reason": "почему она сама напишет, по-человечески",
-      "pingAt": "ISO-время когда написать",
+      "about": "她未来消息的简短主题",
+      "reason": "她为什么主动发消息，人性化一点",
+      "pingAt": "ISO 时间，什么时候发",
       "importance": 1
     }
   ]
@@ -211,9 +211,9 @@ const TEMPLATE_AUTONOMOUS = (
   maxItems: number
 ) => `${state}
 
-Сейчас (${tz}): ${nowISO}
+现在 (${tz}): ${nowISO}
 
-Её сегодняшний день:
+她今天的一天：
 ${JSON.stringify({
   dateLocal: dailyLife.dateLocal,
   vibe: dailyLife.vibe,
@@ -223,25 +223,25 @@ ${JSON.stringify({
   wants: dailyLife.wants
 }, null, 2)}
 
-Последние сообщения:
-${history || "(переписки ещё мало)"}
+最近的消息：
+${history || "（聊天记录还不多）"}
 
-Уже запланировано:
-${currentAgenda.length ? JSON.stringify(currentAgenda.filter(a => a.state === "pending").map(a => ({ about: a.about, pingAt: a.pingAt, reason: a.reason })), null, 2) : "(пусто)"}
+已计划：
+${currentAgenda.length ? JSON.stringify(currentAgenda.filter(a => a.state === "pending").map(a => ({ about: a.about, pingAt: a.pingAt, reason: a.reason })), null, 2) : "（空）"}
 
-Создай 0-${maxItems} проактивных сообщений на ближайшие 18 часов.
+创建 0-${maxItems} 条未来 18 小时内的主动消息。
 
-Правила:
-- Это именно ЕЁ инициативы: "блин у нас щас...", "ты где пропал", "я щас такое увидела", "мне снилась фигня", "мама бесит", "скинуть бы тебе но ладно", "я устала".
-- Не создавай скучное "как дела" без причины.
-- Не будь слишком липкой на холодных стадиях.
-- КРИТИЧНО: НЕ ВЫДУМЫВАЙ темы которых не было в переписке или long-term memory. Не ссылайся на события/разговоры которых НЕ было. Если в истории нет упоминания темы — не пиши про неё. Лучше создай item про свою жизнь/день/настроение.
-- На dating-early+ можно скучать, ревновать, проверять, писать бытовое.
-- pingAt должен быть в будущем, не во время сна и не во время blocks с phoneAvailable=false.
-- Разноси сообщения минимум на 45 минут.
-- НЕ создавай дубликаты текущей agenda.
-- Если сегодня по контексту неуместно писать первой — items=[].
-- НЕ оборачивай в markdown. Только JSON.`;
+规则：
+- 这必须是她的主动行为："哎呀我们现在...", "你跑哪去了", "我刚看到个东西", "我做了个怪梦", "我妈烦死了", "想发给你看看算了", "我累了"。
+- 不要无缘无故地发无聊的"在干嘛"。
+- 在冷淡阶段不要太粘人。
+- 关键：不要编造聊天记录或 long-term memory 里没有的话题。不要引用不存在的事件/对话。如果历史里没有提到某个话题——不要写它。最好创建关于她自己的生活/一天/心情的 item。
+- 到了 dating-early+ 阶段可以想他、吃醋、查岗、发日常琐事。
+- pingAt 必须在将来，不能在她睡觉时间，也不能在 phoneAvailable=false 的 block 时段。
+- 消息间隔至少 45 分钟。
+- 不要重复创建当前 agenda 已有的内容。
+- 如果今天按上下文不适合主动发消息——items=[]。
+- 不要包在 markdown 里。只要 JSON。`;
 
 export async function extractAgendaUpdates(
   llm: LLMClient,
@@ -252,14 +252,14 @@ export async function extractAgendaUpdates(
 ): Promise<{ created: number; updated: number; cancelled: number }> {
   const stage = findStage(cfg.stage);
   const communication = normalizeCommunicationProfile(cfg);
-  // Агенда не для холодных стадий — экономим LLM-вызовы.
+  // Agenda 不用于冷淡阶段 — 节省 LLM 调用。
   if ((cfg.stage === "tg-given-cold" && communication.initiative !== "high") || (cfg.stage === "met-irl-got-tg" && communication.initiative === "low")) {
     return { created: 0, updated: 0, cancelled: 0 };
   }
 
   const persona = (await readMd(cfg.slug, "persona.md")).slice(0, 800);
-  const stateBlock = `# Стадия: ${stage.label} (${stage.description})\n# ${communicationDecisionState(communication)}\n# persona фрагмент:\n${persona}`;
-  const histStr = history.slice(-8).map(m => `${m.role === "user" ? "он" : "она"}: ${m.content}`).join("\n");
+  const stateBlock = `# 阶段: ${stage.label} (${stage.description})\n# ${communicationDecisionState(communication)}\n# persona 片段:\n${persona}`;
+  const histStr = history.slice(-8).map(m => `${m.role === "user" ? "他" : "她"}: ${m.content}`).join("\n");
   const agenda = await readAgenda(cfg.slug);
   const now = new Date().toISOString();
 
@@ -286,7 +286,7 @@ export async function extractAgendaUpdates(
         about: a.about,
         userEventTime: a.userEventTime || undefined,
         pingAt: a.pingAt,
-        reason: a.reason ?? "хочет узнать как прошло",
+        reason: a.reason ?? "想知道结果怎么样",
         importance: (a.importance ?? 1) as 1 | 2 | 3,
         state: "pending",
         attempts: 0,
@@ -366,15 +366,15 @@ export async function ensureAutonomousAgenda(
   const longTerm = palace.length
     ? palace.map(d => `- [${d.ts.slice(0, 10)} ${d.hall}/${d.room}] ${d.quote}`).join("\n")
     : (await readMd(cfg.slug, "memory/long-term.md")).slice(-1200);
-  const histStr = history.slice(-16).map(m => `${m.role === "user" ? "он" : "она"}: ${m.content}`).join("\n");
+  const histStr = history.slice(-16).map(m => `${m.role === "user" ? "他" : "她"}: ${m.content}`).join("\n");
   const stateBlock = [
-    `# Стадия: ${stage.label} (${cfg.stage})`,
-    `# Описание стадии: ${stage.description}`,
+    `# 阶段: ${stage.label} (${cfg.stage})`,
+    `# 阶段描述: ${stage.description}`,
     `# Score: ${JSON.stringify(rel.score)}`,
     `# ${communicationDecisionState(communication)}`,
     `# persona:\n${persona}`,
     `# speech:\n${speech}`,
-    longTerm ? `# long-term memory (что реально известно о нём):\n${longTerm}` : "# long-term memory: (пусто — пока ничего не знаешь о нём, НЕ придумывай факты)"
+    longTerm ? `# long-term memory（真正知道的关于他的信息）:\n${longTerm}` : "# long-term memory: （空 — 目前还不了解他，不要编造事实）"
   ].filter(Boolean).join("\n\n");
 
   let items: AutonomousItem[] = [];
@@ -397,7 +397,7 @@ export async function ensureAutonomousAgenda(
       id: `auto_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
       about: item.about!,
       pingAt: item.pingAt!,
-      reason: item.reason ?? "самой захотелось написать",
+      reason: item.reason ?? "自己想发消息",
       importance: item.importance ?? 1,
       state: "pending",
       attempts: 0,
@@ -446,7 +446,7 @@ export async function reconcileAgendaAfterConflict(
   return { cancelled, rescheduled };
 }
 
-/** Возвращает items, у которых pingAt <= now и state="pending". */
+/** 返回 pingAt <= now 且 state="pending" 的 items。 */
 export async function dueAgendaItems(slug: string): Promise<AgendaItem[]> {
   const agenda = await readAgenda(slug);
   const now = Date.now();
@@ -475,13 +475,13 @@ export async function rescheduleAgenda(slug: string, id: string, newPingAt: stri
   }
 }
 
-const SYS_RESCHED = `Ты — внутренний планировщик девушки. Она недавно проактивно написала юзеру (item ниже), а он ответил. Реши, надо ли ей переписать снова и когда. Это поведение живого человека: если он сказал "занят, отстань" — она обидится или поймёт и перенесёт. Если "ок поговорим вечером" — поставит вечером. Если получила нормальный ответ на свой вопрос — она удовлетворена, agenda можно cancel.
+const SYS_RESCHED = `你是女友的内部规划器。她最近主动给用户发了消息（item 如下），他回复了。决定她是否需要再发、什么时候发。这是真实人的行为：如果他说"忙着呢，别烦"——她会生气或理解然后推迟。如果他说"好晚上聊"——她会设到晚上。如果她的问题得到了正常回答——她满足了，agenda 可以取消。
 
-Верни СТРОГО JSON:
+严格返回 JSON：
 {
   "decision": "satisfied" | "reschedule" | "give-up",
-  "newPingAt"?: "ISO если reschedule",
-  "note": "коротко почему так решила"
+  "newPingAt"?: "ISO 如果是 reschedule",
+  "note": "简短说明为什么这么决定"
 }`;
 
 export async function decideAfterProactiveResponse(
@@ -491,15 +491,15 @@ export async function decideAfterProactiveResponse(
   userResponse: string
 ): Promise<{ decision: "satisfied" | "reschedule" | "give-up"; newPingAt?: string; note: string }> {
   const now = new Date().toISOString();
-  const prompt = `Стадия: ${cfg.stage}
-Сейчас (${cfg.tz}): ${now}
+  const prompt = `阶段: ${cfg.stage}
+现在 (${cfg.tz}): ${now}
 Item:
 ${JSON.stringify(item, null, 2)}
 
-Юзер ответил на её ping:
+用户回复了她的消息：
 """${userResponse}"""
 
-Reшение?`;
+决定？`;
   try {
     const raw = await llm.chat(
       [{ role: "system", content: SYS_RESCHED }, { role: "user", content: prompt }],
@@ -512,7 +512,7 @@ Reшение?`;
       note: parsed.note ?? ""
     };
   } catch {
-    // дефолт — больше не пинговать чтобы не быть навязчивой
+    // 默认 — 不再发消息以免显得纠缠
     return { decision: "satisfied", note: "fallback" };
   }
 }

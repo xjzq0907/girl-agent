@@ -1,4 +1,4 @@
-// Тонкий wrapper над fetch. Один запрос — одна функция.
+// fetch 的薄封装。一个请求 — 一个函数。
 
 export interface ProfileSummary {
   slug: string; name: string; age: number; nationality: string;
@@ -61,9 +61,9 @@ export interface AddonManifest {
   settings?: AddonSetting[];
   icon?: string;
   homepage?: string;
-  /** downloadUrl для реестра */
+  /** 注册表的 downloadUrl */
   downloadUrl?: string;
-  /** флаг: уже установлен */
+  /** 标志：已安装 */
   installed?: boolean;
 }
 
@@ -219,7 +219,7 @@ export const api = {
   },
 
   // === Userbot login (Task #6, #13) ===
-  async tgSendCode(payload: { phone: string; useRemote?: boolean; apiId?: number; apiHash?: string }) {
+  async tgSendCode(payload: { phone: string; useRemote?: boolean; apiId?: number; apiHash?: string; proxy?: string }) {
     return req<{ method: "remote" | "self"; loginToken?: string; sessionId?: string }>(
       "POST", "/api/tg/userbot/send-code", payload
     );

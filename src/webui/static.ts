@@ -25,7 +25,7 @@ const MIME: Record<string, string> = {
 let cachedRoot: string | null = null;
 
 /**
- * Найти собранный отдельный React/Vite WebUI из корневой папки webui/.
+ * 从 webui/ 根文件夹查找已构建的 React/Vite WebUI。
  */
 async function findWebUIRoot(): Promise<string | null> {
   if (cachedRoot) return cachedRoot;
@@ -100,15 +100,15 @@ async function sendFile(res: http.ServerResponse, filePath: string): Promise<boo
 }
 
 const FALLBACK_HTML = `<!DOCTYPE html>
-<html lang="ru"><head><meta charset="utf-8"><title>girl-agent</title>
+<html lang="zh"><head><meta charset="utf-8"><title>girl-agent</title>
 <style>
 body{font-family:Inter,system-ui,sans-serif;background:#0a0010;color:#fff8ff;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
 .box{max-width:540px;padding:24px;border:1px solid rgba(255,255,255,0.1);border-radius:16px;background:rgba(255,255,255,0.04);backdrop-filter:blur(12px)}
 h1{margin:0 0 12px 0;font-size:20px;color:#ff7ad6}
 code{background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px}
 </style></head><body><div class="box">
-<h1>girl-agent — WebUI ещё не собран</h1>
-<p>Соберите фронтенд:</p>
+<h1>girl-agent — WebUI 尚未构建</h1>
+<p>构建前端:</p>
 <pre><code>npm run build:webui</code></pre>
-<p>API доступен по адресу <code>/api/system/health</code>.</p>
+<p>API 可通过以下地址访问 <code>/api/system/health</code>.</p>
 </div></body></html>`;

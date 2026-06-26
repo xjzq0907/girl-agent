@@ -18,7 +18,7 @@ export function describeLLM(cfg: ProfileConfig): string {
     ? "oauth"
     : cfg.llm.apiKey.trim()
       ? "api-key"
-      : "без ключа";
+      : "无密钥";
   return [
     `provider: ${preset?.name ?? cfg.llm.presetId}`,
     `preset: ${cfg.llm.presetId}`,
@@ -56,14 +56,14 @@ export function applyLLMUpdate(cfg: ProfileConfig, update: LLMUpdate): string[] 
       : cfg.llm.baseURL;
   const rawModel = update.model ?? (presetChanged ? preset?.defaultModel : cfg.llm.model) ?? "";
   let model = normalizeModelName(rawModel);
-  // Issue #75: если модель не подходит к пресету (например, после смены
-  // pre­сета или ручного ввода) — мягко откатываемся на defaultModel пресета,
-  // НЕ роняем процесс. Применяем только если пресет фиксированный (не custom)
-  // и явно перечисляет модели.
+  // Issue #75: 如果模型与预设不匹配（例如，切换预设或手动输入后）
+  // — 则温和地回退到预设的 defaultModel，
+  // 不中断进程。仅当预设为固定预设（非 custom）
+  // 并且显式列出了模型时才生效。
   if (preset && !preset.custom && Array.isArray(preset.models) && preset.models.length > 0 && model && !preset.models.includes(model)) {
     const fallback = preset.defaultModel || preset.models[0] || "";
     if (fallback && fallback !== model) {
-      changed.push(`model ${model} не входит в пресет ${preset.name} → fallback ${fallback}`);
+      changed.push(`model ${model} 不在预设 ${preset.name} 中 → 回退到 ${fallback}`);
       model = fallback;
     }
   }
@@ -78,9 +78,9 @@ export function applyLLMUpdate(cfg: ProfileConfig, update: LLMUpdate): string[] 
   if (presetChanged) changed.push(`provider ${currentPresetId} → ${presetId}`);
   if (cfg.llm.model !== model) changed.push(`model ${cfg.llm.model || "—"} → ${model || "—"}`);
   if (cfg.llm.proto !== proto) changed.push(`proto ${cfg.llm.proto} → ${proto}`);
-  if ((cfg.llm.baseURL ?? "") !== (baseURL ?? "")) changed.push("baseURL обновлён");
-  if (update.apiKey !== undefined) changed.push("apiKey обновлён");
-  if (!keepOAuth && cfg.llm.oauthRefreshToken) changed.push("старый OAuth очищен");
+  if ((cfg.llm.baseURL ?? "") !== (baseURL ?? "")) changed.push("baseURL 已更新");
+  if (update.apiKey !== undefined) changed.push("apiKey 已更新");
+  if (!keepOAuth && cfg.llm.oauthRefreshToken) changed.push("旧 OAuth 已清除");
 
   cfg.llm = {
     presetId,

@@ -243,7 +243,7 @@ class AnthropicLike implements LLMClient {
         content: m.content
       }));
 
-    // Anthropic требует чередование ролей и старт с user — мерджим подряд одинаковые
+    // Anthropic 需要交替角色并以 user 开头 — 合并连续的相同角色
     const merged: { role: "user" | "assistant"; content: ChatContent }[] = [];
     for (const m of rest) {
       const last = merged[merged.length - 1];
@@ -253,13 +253,13 @@ class AnthropicLike implements LLMClient {
         merged.push({ ...m });
       }
     }
-    // Должно начинаться с user
+    // 必须以 user 开头
     if (merged.length === 0 || merged[0]!.role !== "user") {
-      merged.unshift({ role: "user", content: "(продолжай)" });
+      merged.unshift({ role: "user", content: "(继续)" });
     }
-    // Должно заканчиваться на user
+    // 必须以 user 结尾
     if (merged[merged.length - 1]!.role !== "user") {
-      merged.push({ role: "user", content: "(продолжай)" });
+      merged.push({ role: "user", content: "(继续)" });
     }
 
     const params: MessageCreateParamsNonStreaming = {
@@ -465,7 +465,7 @@ function enrichAnthropicError(error: unknown, baseURL?: string): Error {
 
 function connectionErrorMessage(provider: string, baseURL: string | undefined, error: Error): string {
   const endpoint = normalizeBaseURL(baseURL) ?? "default endpoint";
-  return `${provider} connection failed (${endpoint}): ${error.message}. Проверь, что base URL доступен с этой машины, сервер запущен, путь включает нужный OpenAI/Anthropic-compatible endpoint и ключ подходит провайдеру.`;
+  return `${provider} connection failed (${endpoint}): ${error.message}. 请检查 base URL 是否可从本机访问、服务器是否启动、路径是否包含正确的 OpenAI/Anthropic-compatible endpoint，以及密钥是否与提供商匹配。`;
 }
 
 function errorMessage(error: unknown): string {

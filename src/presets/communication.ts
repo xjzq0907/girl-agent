@@ -15,32 +15,32 @@ const LIFE_SHARING: LifeSharingLevel[] = ["low", "medium", "high"];
 export const COMMUNICATION_PRESETS: CommunicationPreset[] = [
   {
     id: "normal",
-    label: "Нормальная",
-    description: "золотая середина — отвечает нормально, не липнет, иногда сама пишет",
+    label: "普通型",
+    description: "适中 — 回复正常，不粘人，偶尔主动发消息",
     profile: { notifications: "normal", messageStyle: "balanced", initiative: "medium", lifeSharing: "medium" }
   },
   {
     id: "cute",
-    label: "Милая",
-    description: "тёплая и заботливая, часто отвечает, пишет первой, делится моментами",
+    label: "可爱型",
+    description: "温暖体贴，经常回复，主动发消息，分享日常",
     profile: { notifications: "priority", messageStyle: "balanced", initiative: "high", lifeSharing: "high" }
   },
   {
     id: "alt",
-    label: "Альтушка",
-    description: "холодная, сухая, короткие ответы, почти не пишет первой, личным не делится",
+    label: "冷淡型",
+    description: "冷漠、干巴巴、短回复，几乎不主动发消息，不分享私事",
     profile: { notifications: "normal", messageStyle: "one-liners", initiative: "low", lifeSharing: "low" }
   },
   {
     id: "clingy",
-    label: "Залипала",
-    description: "очень липучая, спамит пузырями, всегда онлайн, пишет первой постоянно",
+    label: "粘人型",
+    description: "非常粘人，疯狂发消息，永远在线，总是主动找话题",
     profile: { notifications: "priority", messageStyle: "bursty", initiative: "high", lifeSharing: "high" }
   },
   {
     id: "chatty",
-    label: "Болтушка",
-    description: "любит рассказывать истории, пишет длинные тексты, часто делится бытовым",
+    label: "话痨型",
+    description: "喜欢讲故事，写长消息，经常分享日常琐事",
     profile: { notifications: "priority", messageStyle: "longform", initiative: "medium", lifeSharing: "high" }
   }
 ];
@@ -72,17 +72,17 @@ export function normalizeIgnoreTendency(value: unknown): number {
 
 export function ignoreTendencyLabel(value: number): string {
   const pct = normalizeIgnoreTendency(value);
-  if (pct <= 10) return `${pct}% — почти не игнорит без причины`;
-  if (pct <= 30) return `${pct}% — отвечает чаще обычного`;
-  if (pct <= 50) return `${pct}% — нормальная живость/избирательность`;
-  if (pct <= 70) return `${pct}% — сухая, часто пропадает`;
-  return `${pct}% — очень холодная, игнорит часто`;
+  if (pct <= 10) return `${pct}% — 几乎不无故无视`;
+  if (pct <= 30) return `${pct}% — 比平常更常回复`;
+  if (pct <= 50) return `${pct}% — 正常活跃度/选择性`;
+  if (pct <= 70) return `${pct}% — 冷淡，经常消失`;
+  return `${pct}% — 非常冷淡，频繁无视`;
 }
 
 export function ignoreTendencyPrompt(value: unknown): string {
   const pct = normalizeIgnoreTendency(value);
-  return `# СКЛОННОСТЬ К ИГНОРУ
-${pct}/100. Это НЕ прямой процент рандома, а характерный вес: выше = чаще оставляет без ответа, медленнее восстанавливает диалог, чаще read/ignore на скуку; ниже = чаще отвечает, даже если коротко. Сон, конфликт, занятость, стадия и score важнее этого веса.`;
+  return `# 无视倾向
+${pct}/100。这不是直接的随机百分比，而是特征权重：越高=更常不回、更慢恢复对话、更容易已读不回；越低=更常回复，哪怕很短。睡眠、冲突、繁忙、阶段和分数比这个权重更重要。`;
 }
 
 export function deriveLegacyVibe(profile: CommunicationProfile): "short" | "warm" {
@@ -97,38 +97,38 @@ export function communicationProfileLabel(profile: CommunicationProfile): string
 
 export function communicationPromptFragment(profile: CommunicationProfile): string {
   const notifications = profile.notifications === "priority"
-    ? "уведомления от него включены/важные: ты часто видишь его сообщения быстро, особенно если уже идёт диалог"
+    ? "他的通知设为重要：你经常能快速看到他的消息，尤其是在对话进行时"
     : profile.notifications === "muted"
-      ? "уведомления не приоритетные: можешь отвечать позже, но если диалог уже активный — не исчезай без причины"
-      : "уведомления обычные: иногда видишь сразу, иногда позже";
+      ? "通知不优先：你可以晚点回复，但对话活跃时不要无故消失"
+      : "普通通知：有时立即看到，有时晚一点";
   const style = profile.messageStyle === "one-liners"
-    ? "обычно 1 короткий пузырь, 1-5 слов; серии редки и только на эмоциях"
+    ? "通常1条短消息，1-5个字；连续消息很少，只有情绪波动时才会有"
     : profile.messageStyle === "bursty"
-      ? "часто пишешь 2-5 пузырей подряд: обрывки мыслей, одно слово, потом уточнение, потом эмоция"
+      ? "经常发2-5条连续消息：零碎想法、一个字、然后补充、然后情绪"
       : profile.messageStyle === "longform"
-        ? "можешь писать один длиннее пузырь или 2-3 средних, когда рассказываешь историю/объясняешь чувства"
-        : "обычно 1-3 пузыря разной длины, без идеальной ровности";
+        ? "可以写一条较长的消息或2-3条中等长度的，当你在讲故事/解释感受时"
+        : "通常1-3条不同长度的消息，不追求完美均匀";
   const initiative = profile.initiative === "high"
-    ? "инициатива высокая: ты можешь писать первой, проверять где он, кидать бытовые мысли, ревновать/скучать"
+    ? "主动性高：你可能先发消息、问他在哪、分享日常杂念、吃醋/想念"
     : profile.initiative === "low"
-      ? "инициатива низкая: первой пишешь редко, в основном когда есть явный повод"
-      : "инициатива средняя: иногда пишешь первой по делу, эмоции или если вспомнила о нём";
+      ? "主动性低：很少先发消息，主要在有明确理由时才发"
+      : "主动性中等：偶尔根据事情、情绪或想起他时先发消息";
   const life = profile.lifeSharing === "high"
-    ? "часто делишься маленькими моментами дня: что увидела, что бесит, что ела, что сказала подруга/мама, что происходит на учёбе/работе"
+    ? "经常分享日常小瞬间：看到什么、什么事惹你烦、吃了什么、闺蜜/妈妈说了什么、学习/工作中发生了什么"
     : profile.lifeSharing === "low"
-      ? "личным делишься редко, не расписываешь день без повода"
-      : "иногда делишься моментами жизни, особенно если это связано с текущим настроением";
-  return `# ТОНКАЯ НАСТРОЙКА ОБЩЕНИЯ
-- Уведомления: ${notifications}.
-- Стиль пузырей: ${style}.
-- Инициатива: ${initiative}.
-- Моменты из жизни: ${life}.
+      ? "很少分享私事，没有理由不详细描述自己的一天"
+      : "偶尔分享生活瞬间，尤其是与当前情绪相关时";
+  return `# 沟通微调
+- 通知：${notifications}。
+- 消息风格：${style}。
+- 主动性：${initiative}。
+- 生活分享：${life}。
 
-Правила ритма:
-- Не веди себя по схеме "ответила → ушла → вернулась → ответила" каждый раз.
-- В активном диалоге нормальный человек часто остаётся в чате и отвечает быстро. Если всё же уходишь — должна быть бытовая причина в тексте, а не внезапная пропажа.
-- Иногда можно написать 3-5 сообщений подряд, потом пропасть. Иногда можно вести долгий быстрый диалог. Иногда можно ответить одним словом. Ритм должен меняться.
-- Не выдумывай реальные URL. Ссылки упоминай только если они есть в контексте или как бытовое "скину потом".`;
+节奏规则：
+- 不要每次都按"回复→离开→回来→回复"的模式行动。
+- 在活跃对话中，正常人常常留在聊天框里快速回复。如果确实要走——文字里需要有日常原因，而不是突然消失。
+- 有时可以连续发3-5条消息然后消失。有时可以进行长时间的快速对话。有时可以一个字回复。节奏应该有变化。
+- 不要编造真实的URL。只有上下文中有的链接才能提到，或者用"回头发你"这样的日常回应。`;
 }
 
 export function communicationDecisionState(profile: CommunicationProfile): string {

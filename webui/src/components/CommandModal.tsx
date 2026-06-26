@@ -17,7 +17,7 @@ export function CommandModal() {
           {modal.loading ? (
             <div className="cmd-loading">
               <div className="spinner" />
-              <span>Выполняю…</span>
+              <span>正在执行…</span>
             </div>
           ) : modal.error ? (
             <div className="cmd-error">{modal.error}</div>
@@ -33,7 +33,7 @@ export function CommandModal() {
 }
 
 function formatCommandResult(command: string, text: string) {
-  if (!text) return <div className="cmd-empty">Нет данных</div>;
+  if (!text) return <div className="cmd-empty">无数据</div>;
 
   const lines = text.split("\n").filter(Boolean);
 

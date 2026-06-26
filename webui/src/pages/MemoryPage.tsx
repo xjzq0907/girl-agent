@@ -4,12 +4,12 @@ import { api } from "../lib/api";
 import { renderMarkdown } from "../lib/markdown";
 
 const SUGGESTED = [
-  { path: "persona.md", label: "persona.md", hint: "кто она: внешность, бэкграунд, привычки" },
-  { path: "speech.md", label: "speech.md", hint: "как пишет: лексика, длина, эмоции" },
-  { path: "boundaries.md", label: "boundaries.md", hint: "что не делает / реагирует негативно" },
-  { path: "communication.md", label: "communication.md", hint: "стиль и темпы общения" },
-  { path: "long-term.md", label: "long-term.md", hint: "долговременная память (заметки)" },
-  { path: "relationship.md", label: "relationship.md", hint: "стадия + score + история отношений" }
+  { path: "persona.md", label: "persona.md", hint: "她是谁: 外貌、背景、习惯" },
+  { path: "speech.md", label: "speech.md", hint: "如何写作: 词汇、长度、情感" },
+  { path: "boundaries.md", label: "boundaries.md", hint: "不做的事 / 负面反应" },
+  { path: "communication.md", label: "communication.md", hint: "沟通风格和节奏" },
+  { path: "long-term.md", label: "long-term.md", hint: "长期记忆 (笔记)" },
+  { path: "relationship.md", label: "relationship.md", hint: "阶段 + 分数 + 关系历史" }
 ];
 
 export function MemoryPage() {
@@ -45,7 +45,7 @@ export function MemoryPage() {
     return (
       <div className="empty">
         <div className="em-icon">❀</div>
-        <div className="em-title">Создайте профиль, чтобы редактировать память</div>
+        <div className="em-title">创建个人资料以编辑记忆</div>
       </div>
     );
   }
@@ -56,10 +56,10 @@ export function MemoryPage() {
     try {
       await api.writeMemoryFile(cfg.slug, active, content);
       setOriginalContent(content);
-      toast(`${active} сохранён`, "success");
+      toast(`${active} 已保存`, "success");
       void api.listMemoryFiles(cfg.slug).then(r => setFiles(r.files));
     } catch (e) {
-      toast(`Ошибка сохранения: ${(e as Error)?.message}`, "error");
+      toast(`保存错误: ${(e as Error)?.message}`, "error");
     }
   }
 
@@ -78,7 +78,7 @@ export function MemoryPage() {
   return (
     <div className="memory-shell">
       <div className="card" style={{ padding: 14, overflowY: "auto", maxHeight: "82vh" }}>
-        <div className="h-title" style={{ marginBottom: 8 }}>Файлы памяти</div>
+        <div className="h-title" style={{ marginBottom: 8 }}>记忆文件</div>
         <div className="memory-list">
           {groups.core.map(it => (
             <div key={it.path} className={`memory-item ${active === it.path ? "active" : ""}`} onClick={() => setActive(it.path)}>
@@ -93,7 +93,7 @@ export function MemoryPage() {
 
         {groups.daily.length > 0 && (
           <>
-            <div className="h-title" style={{ margin: "16px 0 8px", fontSize: 13 }}>Дневные саммари</div>
+            <div className="h-title" style={{ margin: "16px 0 8px", fontSize: 13 }}>每日摘要</div>
             <div className="memory-list">
               {groups.daily.slice(-30).reverse().map(it => (
                 <div key={it.path} className={`memory-item ${active === it.path ? "active" : ""}`} onClick={() => setActive(it.path)}>
@@ -106,7 +106,7 @@ export function MemoryPage() {
         )}
         {groups.episodes.length > 0 && (
           <>
-            <div className="h-title" style={{ margin: "16px 0 8px", fontSize: 13 }}>Эпизоды</div>
+            <div className="h-title" style={{ margin: "16px 0 8px", fontSize: 13 }}>片段</div>
             <div className="memory-list">
               {groups.episodes.slice(-30).reverse().map(it => (
                 <div key={it.path} className={`memory-item ${active === it.path ? "active" : ""}`} onClick={() => setActive(it.path)}>
@@ -124,12 +124,12 @@ export function MemoryPage() {
           <div className="h-title">{active ?? "—"}</div>
           <div className="h-actions">
             <div style={{ display: "flex", gap: 4, padding: 2, background: "var(--ga-bg-elev)", borderRadius: 8 }}>
-              <button className={`btn tiny ${view === "edit" ? "primary" : "ghost"}`} style={{ padding: "4px 10px" }} onClick={() => setView("edit")}>Текст</button>
-              <button className={`btn tiny ${view === "split" ? "primary" : "ghost"}`} style={{ padding: "4px 10px" }} onClick={() => setView("split")}>Раздельно</button>
-              <button className={`btn tiny ${view === "preview" ? "primary" : "ghost"}`} style={{ padding: "4px 10px" }} onClick={() => setView("preview")}>Превью</button>
+              <button className={`btn tiny ${view === "edit" ? "primary" : "ghost"}`} style={{ padding: "4px 10px" }} onClick={() => setView("edit")}>文本</button>
+              <button className={`btn tiny ${view === "split" ? "primary" : "ghost"}`} style={{ padding: "4px 10px" }} onClick={() => setView("split")}>分屏</button>
+              <button className={`btn tiny ${view === "preview" ? "primary" : "ghost"}`} style={{ padding: "4px 10px" }} onClick={() => setView("preview")}>预览</button>
             </div>
             <span className="chip">{content.length}c</span>
-            <button className="btn primary tiny" disabled={!dirty || loading} onClick={() => void save()}>Сохранить</button>
+            <button className="btn primary tiny" disabled={!dirty || loading} onClick={() => void save()}>保存</button>
           </div>
         </div>
         <div style={{ flex: 1, display: view === "split" ? "grid" : "block", gridTemplateColumns: "1fr 1fr", gap: 12, minHeight: 0 }}>
@@ -139,11 +139,11 @@ export function MemoryPage() {
               spellCheck={false}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder={loading ? "загрузка..." : "пусто. Markdown поддерживается."}
+              placeholder={loading ? "加载中..." : "空白。支持 Markdown。"}
             />
           )}
           {(view === "preview" || view === "split") && (
-            <div className="md-preview" dangerouslySetInnerHTML={{ __html: previewHtml || "<p style='color:var(--ga-text-faint)'>(пусто)</p>" }} />
+            <div className="md-preview" dangerouslySetInnerHTML={{ __html: previewHtml || "<p style='color:var(--ga-text-faint)'>(空白)</p>" }} />
           )}
         </div>
       </div>
