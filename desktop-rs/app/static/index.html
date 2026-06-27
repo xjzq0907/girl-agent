@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -34,7 +34,7 @@
       </section>
 
       <section class="card scores">
-        <h2>отношение</h2>
+        <h2>关系</h2>
         <ul id="score-list">
           <li data-key="interest"><span class="key">interest</span><span class="bar"><span class="fill"></span></span><span class="val">0</span></li>
           <li data-key="trust"><span class="key">trust</span><span class="bar"><span class="fill"></span></span><span class="val">0</span></li>
@@ -46,8 +46,8 @@
 
       <section class="card log">
         <div class="log-header">
-          <h2>лог</h2>
-          <span class="muted" id="log-count">0 строк</span>
+          <h2>日志</h2>
+          <span class="muted" id="log-count">0 条</span>
         </div>
         <pre id="log"></pre>
       </section>
@@ -56,9 +56,9 @@
         <form id="cmd-form">
           <span class="prompt-prefix">&gt;</span>
           <input id="cmd" type="text" autocomplete="off" placeholder=":status, :pause, :stage convinced, :help" />
-          <button type="submit">отправить</button>
+          <button type="submit">发送</button>
         </form>
-        <p class="hint muted">команды начинаются с <code>:</code> — точно как в нативном дашборде</p>
+        <p class="hint muted">命令以 <code>:</code> 开头 —— 与原生仪表盘中的用法一致</p>
       </section>
     </main>
 

@@ -15,7 +15,7 @@ export function baseOptions(): BaseLayoutProps {
     },
     links: [
       {
-        text: "Главная",
+        text: "主页",
         url: "https://girl-agent.com",
         active: "none",
       },

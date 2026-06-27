@@ -24,7 +24,7 @@ services:
       # GIRL_AGENT_TOKEN: ${TG_BOT_TOKEN}
       # GIRL_AGENT_API_PRESET: claudehub
       # GIRL_AGENT_API_KEY: ${LLM_API_KEY}
-      # GIRL_AGENT_NAME: Аня
+      # GIRL_AGENT_NAME: 安妮
       # GIRL_AGENT_AGE: "22"
     ports:
       - "3000:3000"

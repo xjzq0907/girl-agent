@@ -56,7 +56,7 @@
     logEl.appendChild(span);
     while (logEl.childNodes.length > 400) logEl.removeChild(logEl.firstChild);
     logEl.scrollTop = logEl.scrollHeight;
-    $("log-count").textContent = `${logEl.querySelectorAll(".line").length} строк`;
+    $("log-count").textContent = `${logEl.querySelectorAll(".line").length} 条`;
   };
 
   const escapeHtml = (s) =>

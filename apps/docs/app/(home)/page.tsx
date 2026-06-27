@@ -20,27 +20,25 @@ export default function HomePage() {
           docs · girl-agent
         </span>
         <h1 className="text-4xl font-bold tracking-tight md:text-6xl">
-          ИИ-девушка в&nbsp;Telegram,
+          Telegram 中的&nbsp;AI&nbsp;女友，
           <br />
-          которая ведёт&nbsp;себя как&nbsp;человек
+          表现得像真人一&nbsp;样
         </h1>
         <p className="max-w-2xl text-lg text-fd-muted-foreground">
-          Пишет с маленькой буквы, иногда игнорит, спит, обижается, помнит вчерашнее. Без
-          «конечно, я понимаю», без markdown, без AI-повадок. Полное руководство — от установки в
-          одну команду до архитектуры движка.
+          小写字母开头，有时已读不回，会睡觉，会生气，记得昨天说过什么。没有「当然，我理解」，没有 markdown，没有 AI 腔调。从一行命令安装到引擎架构的完整指南。
         </p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/docs/users/quick-start"
             className="inline-flex items-center gap-2 rounded-md bg-fd-primary px-5 py-2.5 text-sm font-medium text-fd-primary-foreground transition hover:opacity-90"
           >
-            Начать за&nbsp;5&nbsp;минут <ArrowRight className="h-4 w-4" />
+            5&nbsp;分钟快速开始 <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
             href="/docs/developers"
             className="inline-flex items-center gap-2 rounded-md border border-fd-border bg-fd-secondary px-5 py-2.5 text-sm font-medium transition hover:bg-fd-secondary/80"
           >
-            Документация для разработчиков <Code2 className="h-4 w-4" />
+            开发者文档 <Code2 className="h-4 w-4" />
           </Link>
         </div>
       </section>
@@ -50,57 +48,57 @@ export default function HomePage() {
           href="/docs/users"
           accent="from-pink-500/15 via-pink-500/5"
           icon={<Sparkles className="h-7 w-7" />}
-          title="Для пользователей"
-          subtitle="не близко к коду — нормально"
-          description="Установка в одну команду, мастер настройки в WebUI, выбор LLM, профили общения, расписание и сон. Всё, чтобы запустить и не сломать."
+          title="用户文档"
+          subtitle="不用看代码也能用"
+          description="一行命令安装，WebUI 配置向导，LLM 选择，沟通风格 profile，作息与睡眠。覆盖从启动到不踩坑的完整流程。"
           bullets={[
-            "Установка: одна команда, без node на машине",
-            "WebUI на http://localhost:3000",
-            "Bot-режим и userbot (MTProto)",
-            "Профили: милая, альтушка, болтушка и др.",
-            "Стадии отношений и реализм-модули",
+            "安装：一行命令，机器上不需要 Node",
+            "WebUI 在 http://localhost:3000",
+            "Bot 模式和 userbot（MTProto）",
+            "Profile：可爱、二次元、话痨 等",
+            "关系阶段和真实性模块",
           ]}
         />
         <TrackCard
           href="/docs/developers"
           accent="from-violet-500/15 via-violet-500/5"
           icon={<Code2 className="h-7 w-7" />}
-          title="Для разработчиков"
-          subtitle="полная картина под капотом"
-          description="Архитектура движка: presence, behavior-tick, memory-palace, agenda, conflict. REST API, WebSocket, формат аддонов .gaa, миграции, headless-режим."
+          title="开发者文档"
+          subtitle="看清引擎内部全貌"
+          description="引擎架构：presence、behavior-tick、memory-palace、agenda、conflict。REST API、WebSocket、.gaa 插件格式、迁移、headless 模式。"
           bullets={[
-            "Архитектура слоёв и runtime.ts",
-            "REST API + WebSocket логи",
-            "Формат .gaa аддонов и манифест",
-            "Headless JSON-events режим",
-            "Миграции, presets, MCP",
+            "分层架构与 runtime.ts",
+            "REST API + WebSocket 日志",
+            ".gaa 插件格式与 manifest",
+            "Headless JSON-events 模式",
+            "迁移、presets、MCP",
           ]}
         />
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <Feature icon={<Bot />} title="Realism-движок" desc="Presence, sleep, busy schedule, daily-life — не одна большая модель, а слои состояния." />
-        <Feature icon={<HeartHandshake />} title="Стадии отношений" desc="9 стадий от «дала тг» до «давно вместе». Каждая со своими счётчиками и поведением." />
-        <Feature icon={<MessagesSquare />} title="Anti-AI prompt" desc="Запрет markdown, «конечно», эмодзи-рядов, вопросов в конце. Реальный тг-стиль." />
-        <Feature icon={<Moon />} title="Спит ночью" desc="`:wake` чтобы разбудить, иначе шанс ответа низкий. Чёткий sleep window." />
-        <Feature icon={<Puzzle />} title="Аддоны .gaa" desc="Zip-архив с manifest.json, файлами, патчем конфига, темой и install-скриптом." />
-        <Feature icon={<Workflow />} title="Server / headless" desc="systemd, Docker, CI/CD — без TTY, через env-vars и --print-config." />
-        <Feature icon={<Terminal />} title="CLI и WebUI" desc="React/Vite WebUI на 3000 порту, плюс быстрые команды через npx girl-agent." />
-        <Feature icon={<Sparkles />} title="15+ LLM" desc="OpenAI, Anthropic, ClaudeHub, Groq, DeepSeek, Mistral, Gemini, xAI, Ollama и др." />
-        <Feature icon={<Code2 />} title="Open-source" desc="TypeScript, Node 18.18+, ESM, React, Grammy, telegram (MTProto)." />
+        <Feature icon={<Bot />} title="Realism 引擎" desc="Presence、sleep、busy schedule、daily-life —— 不是一个大模型，而是一层一层状态叠加。" />
+        <Feature icon={<HeartHandshake />} title="关系阶段" desc="9 个阶段，从「给了 TG」到「在一起很久」。每个阶段有自己的计数器和行为模式。" />
+        <Feature icon={<MessagesSquare />} title="Anti-AI prompt" desc="禁止 markdown、「当然」、emoji 刷屏、句末反问。地道 Telegram 风格。" />
+        <Feature icon={<Moon />} title="夜间会睡觉" desc="用 `:wake` 叫醒，否则回复概率低。明确的 sleep window。" />
+        <Feature icon={<Puzzle />} title=".gaa 插件" desc="Zip 包，内含 manifest.json、文件、config 补丁、主题和 install 脚本。" />
+        <Feature icon={<Workflow />} title="Server / headless" desc="systemd、Docker、CI/CD —— 无需 TTY，通过环境变量和 --print-config。" />
+        <Feature icon={<Terminal />} title="CLI + WebUI" desc="React/Vite WebUI 在 3000 端口，配合 `npx girl-agent` 快速命令。" />
+        <Feature icon={<Sparkles />} title="15+ LLM" desc="OpenAI、Anthropic、ClaudeHub、Groq、DeepSeek、Mistral、Gemini、xAI、Ollama 等。" />
+        <Feature icon={<Code2 />} title="开源" desc="TypeScript、Node 18.18+、ESM、React、Grammy、telegram（MTProto）。" />
       </section>
 
       <section className="rounded-2xl border border-fd-border bg-fd-secondary/30 p-8">
-        <h2 className="text-2xl font-semibold">Установка одной командой</h2>
+        <h2 className="text-2xl font-semibold">一行命令安装</h2>
         <p className="mt-2 text-fd-muted-foreground">
-          Без Node на машине, без sudo, без конфликтов с системой.
+          机器上无需 Node、无需 sudo、不与系统冲突。
         </p>
         <pre className="mt-4 overflow-x-auto rounded-md border border-fd-border bg-fd-card p-4 text-sm">
           <code>curl -fsSL https://raw.githubusercontent.com/TheSashaDev/girl-agent/master/scripts/install.sh | sh</code>
         </pre>
         <p className="mt-4 text-sm text-fd-muted-foreground">
-          После установки запусти <code className="rounded bg-fd-secondary px-1 py-0.5">girl-agent</code> — откроется WebUI на{" "}
-          <code className="rounded bg-fd-secondary px-1 py-0.5">http://localhost:3000</code>.
+          安装后运行 <code className="rounded bg-fd-secondary px-1 py-0.5">girl-agent</code> —— WebUI 会在{" "}
+          <code className="rounded bg-fd-secondary px-1 py-0.5">http://localhost:3000</code> 打开。
         </p>
       </section>
     </main>
@@ -156,7 +154,7 @@ function TrackCard({
         ))}
       </ul>
       <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-fd-primary group-hover:gap-2 transition-all">
-        Открыть <ArrowRight className="h-4 w-4" />
+        打开 <ArrowRight className="h-4 w-4" />
       </span>
     </Link>
   );
