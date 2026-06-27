@@ -65,7 +65,7 @@ pub fn run(data: &WizardData, progress: Sender<InstallProgress>) -> Result<Insta
     let _ = progress.send(InstallProgress {
         stage: InstallStage::Start,
         fraction: 0.02,
-        note: "подготовка…".into(),
+        note: "准备中…".into(),
     });
 
     log.push_str(&format!("runtime dir: {}\n", final_runtime_dir.display()));
@@ -81,14 +81,14 @@ pub fn run(data: &WizardData, progress: Sender<InstallProgress>) -> Result<Insta
         let _ = progress.send(InstallProgress {
             stage: InstallStage::UnpackNode,
             fraction: 0.10,
-            note: "распаковка node.exe…".into(),
+            note: "解压 node.exe…".into(),
         });
         let bytes = decompress_xz(NODE_EXE_XZ)?;
         log.push_str(&format!("decompressed node.exe: {} MB\n", bytes.len() / 1_000_000));
         let _ = progress.send(InstallProgress {
             stage: InstallStage::UnpackRuntime,
             fraction: 0.55,
-            note: "распаковка cli.js + зависимостей…".into(),
+            note: "解压 cli.js + 依赖…".into(),
         });
         let tar_bytes = decompress_xz(RUNTIME_TAR_XZ)?;
         log.push_str(&format!("decompressed runtime.tar: {} MB\n", tar_bytes.len() / 1_000_000));
@@ -139,12 +139,12 @@ pub fn run(data: &WizardData, progress: Sender<InstallProgress>) -> Result<Insta
     let _ = progress.send(InstallProgress {
         stage: InstallStage::WriteConfig,
         fraction: 0.78,
-        note: "создаю папку профиля…".into(),
+        note: "创建配置文件夹…".into(),
     });
 
     let cfg = build_config_json(data);
     if data.slug.is_empty() {
-        return Err(anyhow!("слаг профиля пустой — повтори ввод имени"));
+        return Err(anyhow!("配置标识为空 — 请重新输入名字"));
     }
     let profile_dir = data_root.join(&data.slug);
     fs::create_dir_all(&profile_dir)
@@ -154,7 +154,7 @@ pub fn run(data: &WizardData, progress: Sender<InstallProgress>) -> Result<Insta
     let _ = progress.send(InstallProgress {
         stage: InstallStage::WriteConfig,
         fraction: 0.86,
-        note: "пишу персону…".into(),
+        note: "写入角色…".into(),
     });
 
     let config_path = profile_dir.join("config.json");
@@ -172,7 +172,7 @@ pub fn run(data: &WizardData, progress: Sender<InstallProgress>) -> Result<Insta
     let _ = progress.send(InstallProgress {
         stage: InstallStage::WriteConfig,
         fraction: 0.95,
-        note: "сохраняю выбор профиля…".into(),
+        note: "保存配置选择…".into(),
     });
 
     let mut s = girl_agent_shared::settings::Settings::load();
@@ -183,7 +183,7 @@ pub fn run(data: &WizardData, progress: Sender<InstallProgress>) -> Result<Insta
     let _ = progress.send(InstallProgress {
         stage: InstallStage::Done,
         fraction: 1.0,
-        note: "готово".into(),
+        note: "完成".into(),
     });
 
     Ok(InstallReport {

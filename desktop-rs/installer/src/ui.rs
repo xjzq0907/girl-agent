@@ -189,13 +189,13 @@ impl Default for Model {
 }
 
 const MAIN_STEPS: &[(Step, &str)] = &[
-    (Step::TgMode, "telegram"),
-    (Step::LlmPicker, "ai"),
-    (Step::Persona, "персона"),
-    (Step::Style, "характер"),
-    (Step::Notes, "детали"),
-    (Step::Summary, "проверка"),
-    (Step::Installing, "установка"),
+    (Step::TgMode, "Telegram"),
+    (Step::LlmPicker, "AI"),
+    (Step::Persona, "人设"),
+    (Step::Style, "风格"),
+    (Step::Notes, "备注"),
+    (Step::Summary, "确认"),
+    (Step::Installing, "安装"),
 ];
 
 fn current_main_index(s: Step) -> usize {
@@ -271,7 +271,7 @@ fn progress_header(step: Step) -> Element<'static, Msg> {
         .get(idx)
         .map(|(_, l)| l.to_string())
         .unwrap_or_else(|| "...".into());
-    let counter = format!("шаг {} из {}", idx + 1, total);
+    let counter = format!("第 {} 步，共 {} 步", idx + 1, total);
     container(
         row![
             text(counter).size(12).color(MUTED).font(onest_medium()),
@@ -292,17 +292,17 @@ fn progress_header(step: Step) -> Element<'static, Msg> {
 fn welcome() -> Element<'static, Msg> {
     column![
         text("girl-agent").size(54).font(onest_bold()),
-        text("живая ai-девушка для telegram. молчит когда занята, спит ночью.")
+        text("你的 AI 女友 · 专为 Telegram 打造。她会在忙时沉默，晚上睡觉。")
             .size(15)
             .color(MUTED)
             .font(ONEST),
         Space::with_height(20),
-        text("установка займёт ~30 секунд. node, зависимости и cli уже внутри этого окна — ничего ставить отдельно не надо.")
+        text("安装大约需要 30 秒。Node、依赖和 CLI 已内置，无需单独安装。")
             .size(14)
             .color(INK)
             .font(ONEST),
         Space::with_height(12),
-        text("дальше визард задаст вопросы про telegram, ai-провайдера и характер девушки. весь стейт пишется в %APPDATA%\\girl-agent\\.")
+        text("向导将依次询问 Telegram、AI 服务商和角色性格。所有数据保存在 %APPDATA%\\girl-agent\\。")
             .size(13)
             .color(MUTED)
             .font(instrument_italic()),
@@ -313,21 +313,21 @@ fn welcome() -> Element<'static, Msg> {
 
 fn tg_mode_view(d: &WizardData) -> Element<'_, Msg> {
     column![
-        h2("куда подключиться"),
-        sub("girl-agent умеет работать как обычный bot (через @BotFather) или как user-account (твой обычный telegram, общается как ты)."),
+        h2("连接方式"),
+        sub("girl-agent 可以作为普通 Bot（通过 @BotFather）或 Userbot（你的 Telegram 账号）运行。"),
         Space::with_height(16),
         choice_card(
             "bot",
-            "bot · @BotFather",
-            "стандартный telegram bot. быстро, любой может писать.",
+            "Bot · @BotFather",
+            "标准 Telegram Bot。设置快速，任何人都可以发消息。",
             d.mode == "bot",
             Msg::ModeChanged("bot".into()),
         ),
         Space::with_height(8),
         choice_card(
             "userbot",
-            "userbot · через твой аккаунт",
-            "общается как живая девушка с твоего telegram-аккаунта. требует логина по номеру.",
+            "Userbot · 用你的账号",
+            "以你的 Telegram 账号身份聊天。需要手机号登录。",
             d.mode == "userbot",
             Msg::ModeChanged("userbot".into()),
         ),
@@ -338,11 +338,11 @@ fn tg_mode_view(d: &WizardData) -> Element<'_, Msg> {
 
 fn tg_bot_token_view(d: &WizardData) -> Element<'_, Msg> {
     column![
-        h2("token из @BotFather"),
-        sub("открой telegram, напиши @BotFather → /newbot → следуй шагам. в конце он пришлёт строку вида 1234567890:AAH... — её сюда."),
+        h2("@BotFather 的 Token"),
+        sub("打开 Telegram，给 @BotFather 发送 /newbot，按照步骤操作。最后会收到一串类似 1234567890:AAH... 的内容，复制到这里。"),
         Space::with_height(14),
         labelled_input_with_paste(
-            "bot token",
+            "Bot Token",
             text_input("1234567890:AA...", &d.tg_token)
                 .on_input(Msg::TgTokenChanged)
                 .padding(12)
@@ -351,7 +351,7 @@ fn tg_bot_token_view(d: &WizardData) -> Element<'_, Msg> {
             PasteTarget::TgToken,
         ),
         Space::with_height(8),
-        link_button("открыть @BotFather", "https://t.me/BotFather"),
+        link_button("打开 @BotFather", "https://t.me/BotFather"),
     ]
     .spacing(0)
     .into()
@@ -359,21 +359,21 @@ fn tg_bot_token_view(d: &WizardData) -> Element<'_, Msg> {
 
 fn tg_userbot_source_view(d: &WizardData) -> Element<'_, Msg> {
     column![
-        h2("как залогиниться"),
-        sub("два варианта. рекомендуем proxy — там ничего не надо запоминать."),
+        h2("登录方式"),
+        sub("两种方式可选。推荐使用代理模式 — 无需额外信息。"),
         Space::with_height(14),
         choice_card(
             "owner",
-            "через proxy.girl-agent.com (рекомендуется)",
-            "введёшь только номер телефона и код. api_id и api_hash подтянутся автоматически.",
+            "通过代理登录（推荐）",
+            "只需输入手机号和验证码。api_id 和 api_hash 将自动获取。",
             matches!(d.userbot_source, UserbotAuthSource::Owner),
             Msg::UserbotSourceChanged(UserbotAuthSource::Owner),
         ),
         Space::with_height(8),
         choice_card(
             "own",
-            "свои api_id / api_hash",
-            "если есть свой apps.telegram.org — введёшь руками.",
+            "使用自己的 api_id / api_hash",
+            "如果你有 my.telegram.org 的凭据 — 手动填写。",
             matches!(d.userbot_source, UserbotAuthSource::Own),
             Msg::UserbotSourceChanged(UserbotAuthSource::Own),
         ),
@@ -383,8 +383,8 @@ fn tg_userbot_source_view(d: &WizardData) -> Element<'_, Msg> {
 
 fn tg_userbot_api_view(d: &WizardData) -> Element<'_, Msg> {
     column![
-        h2("свои api_id / api_hash"),
-        sub("регистрация на my.telegram.org → API development tools."),
+        h2("自己的 api_id / api_hash"),
+        sub("在 my.telegram.org 注册 → API 开发工具。"),
         Space::with_height(14),
         labelled_input_with_paste(
             "api_id",
@@ -404,24 +404,24 @@ fn tg_userbot_api_view(d: &WizardData) -> Element<'_, Msg> {
             PasteTarget::TgApiHash,
         ),
         Space::with_height(8),
-        link_button("открыть my.telegram.org", "https://my.telegram.org/apps"),
+        link_button("打开 my.telegram.org", "https://my.telegram.org/apps"),
     ]
     .into()
 }
 
 fn tg_userbot_phone_view<'a>(d: &'a WizardData, status: &'a AsyncStatus) -> Element<'a, Msg> {
     let send_btn: Element<'_, Msg> = if status.busy {
-        ghost_label("отправляем код…")
+        ghost_label("正在发送验证码…")
     } else {
-        primary_button("отправить код", Msg::TgSendCode).into()
+        primary_button("发送验证码", Msg::TgSendCode).into()
     };
     column![
-        h2("номер телефона"),
-        sub("в международном формате: +79991234567. telegram пришлёт код в приложение."),
+        h2("手机号"),
+        sub("国际格式：+86 13800138000。Telegram 会发送验证码给你。"),
         Space::with_height(14),
         labelled_input_with_paste(
-            "phone",
-            text_input("+79991234567", &d.tg_phone)
+            "手机号",
+            text_input("+8613800138000", &d.tg_phone)
                 .on_input(Msg::TgPhoneChanged)
                 .padding(12)
                 .font(JETBRAINS),
@@ -437,16 +437,16 @@ fn tg_userbot_phone_view<'a>(d: &'a WizardData, status: &'a AsyncStatus) -> Elem
 
 fn tg_userbot_code_view<'a>(d: &'a WizardData, status: &'a AsyncStatus) -> Element<'a, Msg> {
     let verify_btn: Element<'_, Msg> = if status.busy {
-        ghost_label("проверяем…")
+        ghost_label("正在验证…")
     } else {
-        primary_button("подтвердить", Msg::TgVerifyCode).into()
+        primary_button("确认", Msg::TgVerifyCode).into()
     };
     column![
-        h2("код из telegram"),
-        sub("приложение telegram прислало код. введи его сюда."),
+        h2("Telegram 验证码"),
+        sub("Telegram 已发送验证码。请输入。"),
         Space::with_height(14),
         labelled_input_with_paste(
-            "код",
+            "验证码",
             text_input("12345", &d.tg_code)
                 .on_input(Msg::TgCodeChanged)
                 .padding(12)
@@ -463,16 +463,16 @@ fn tg_userbot_code_view<'a>(d: &'a WizardData, status: &'a AsyncStatus) -> Eleme
 
 fn tg_userbot_2fa_view<'a>(d: &'a WizardData, status: &'a AsyncStatus) -> Element<'a, Msg> {
     let verify_btn: Element<'_, Msg> = if status.busy {
-        ghost_label("проверяем…")
+        ghost_label("正在验证…")
     } else {
-        primary_button("подтвердить", Msg::TgVerifyPassword).into()
+        primary_button("确认", Msg::TgVerifyPassword).into()
     };
     column![
-        h2("пароль two-step"),
-        sub("на аккаунте включён cloud password. введи его."),
+        h2("两步验证密码"),
+        sub("此账号已开启云端密码。请输入。"),
         Space::with_height(14),
         labelled_input_with_paste(
-            "пароль",
+            "密码",
             text_input("••••••••", &d.tg_2fa)
                 .on_input(Msg::Tg2FaChanged)
                 .padding(12)
@@ -490,8 +490,8 @@ fn tg_userbot_2fa_view<'a>(d: &'a WizardData, status: &'a AsyncStatus) -> Elemen
 
 fn llm_picker_view(d: &WizardData) -> Element<'_, Msg> {
     let mut col = Column::new().spacing(0);
-    col = col.push(h2("ai-провайдер")).push(sub(
-        "что будет генерить ответы. если есть аккаунт в одном из этих сервисов — выбирай его. новичкам: openai или ClaudeHub.",
+    col = col.push(h2("AI 服务商")).push(sub(
+        "选择生成回复的 AI 模型。国内推荐 DeepSeek，中文能力强且性价比高。",
     ));
     col = col.push(Space::with_height(14));
 
@@ -514,7 +514,7 @@ fn llm_picker_view(d: &WizardData) -> Element<'_, Msg> {
 fn llm_card<'a>(p: &'a crate::data::LlmPreset, current: &str) -> Element<'a, Msg> {
     let active = p.id == current;
     let badge: Element<'a, Msg> = if p.recommended {
-        container(text("рекомендуем").size(10).font(onest_bold()).color(BONE))
+        container(text("推荐").size(10).font(onest_bold()).color(BONE))
             .padding(Padding::from([2, 8]))
             .style(|_t| container::Style {
                 background: Some(Background::Color(ACCENT)),
@@ -549,10 +549,10 @@ fn llm_config_view(d: &WizardData) -> Element<'_, Msg> {
     let mut col = Column::new().spacing(0);
     if let Some(p) = preset {
         col = col
-            .push(h2(&format!("настройки {}", p.label)))
+            .push(h2(&format!("{} 设置", p.label)))
             .push(sub(p.hint));
     } else {
-        col = col.push(h2("настройки"));
+        col = col.push(h2("设置"));
     }
     col = col.push(Space::with_height(14));
 
@@ -565,15 +565,15 @@ fn llm_config_view(d: &WizardData) -> Element<'_, Msg> {
                 Some(d.llm_model.clone())
             };
             col = col.push(labelled_input(
-                "модель",
+                "模型",
                 pick_list(model_options, selected, Msg::LlmModelChanged)
                     .width(Length::Fill)
                     .padding(10),
             ));
         } else if p.custom {
             col = col.push(labelled_input(
-                "модель",
-                text_input("например llama3.1", &d.llm_model)
+                "模型",
+                text_input("例如 qwen3", &d.llm_model)
                     .on_input(Msg::LlmModelChanged)
                     .padding(12)
                     .font(JETBRAINS),
@@ -607,7 +607,7 @@ fn llm_config_view(d: &WizardData) -> Element<'_, Msg> {
     } else if let Some(p) = preset {
         col = col
             .push(Space::with_height(8))
-            .push(text(format!("ключ не нужен (используется default «{}»)", p.default_api_key.unwrap_or("none")))
+            .push(text(format!("无需密钥（使用默认值「{}」）", p.default_api_key.unwrap_or("none")))
                 .size(12)
                 .color(MUTED)
                 .font(ONEST));
@@ -628,13 +628,13 @@ fn referral_card(provider: &'static str, label: &'static str, url: &'static str)
     container(
         column![
             row![
-                text("у тебя ещё нет ключа?").size(12).font(onest_medium()).color(INK),
+                text("还没有 Key？").size(12).font(onest_medium()).color(INK),
                 Space::with_width(Length::Fill),
-                text("реферал").size(10).font(onest_bold()).color(BONE),
+                text("推荐").size(10).font(onest_bold()).color(BONE),
             ].align_y(Alignment::Center),
             Space::with_height(4),
             text(format!(
-                "нажми кнопку, зарегайся на {}, оплати любым удобным способом — и получишь бонус ($) на счёт.",
+                "点击按钮，在 {} 注册并付款 — 即可获得账户奖励。",
                 provider
             )).size(12).color(MUTED).font(ONEST),
             Space::with_height(8),
@@ -683,7 +683,7 @@ fn persona_view(m: &Model) -> Element<'_, Msg> {
         .find(|s| s.id == d.sleep_preset)
         .map(|s| s.label.to_string());
 
-    let name_random_btn = button(text("🎲 другое имя").font(onest_medium()).size(13))
+    let name_random_btn = button(text("🎲 换一个").font(onest_medium()).size(13))
         .on_press(Msg::NameRandom)
         .padding(Padding::from([6, 14]))
         .style(|_t, _s| ghost_button_style());
@@ -692,18 +692,18 @@ fn persona_view(m: &Model) -> Element<'_, Msg> {
 
     let mut col = Column::new().spacing(0);
     col = col
-        .push(h2("персона"))
-        .push(sub("основное о девушке: национальность, часовой пояс, имя, возраст, режим сна. потом всё ещё можно менять."))
+        .push(h2("角色"))
+        .push(sub("基本信息：国籍、时区、名字、年龄、睡眠模式。创建后可随时修改。"))
         .push(Space::with_height(14))
         // 1) Nationality first
         .push(labelled_input(
-            "национальность",
+            "国籍",
             pick_list(nat_options, nat_selected, |label| {
                 let id = NATIONALITIES
                     .iter()
                     .find(|(_, lab)| *lab == label)
                     .map(|(id, _)| (*id).to_string())
-                    .unwrap_or_else(|| "RU".into());
+                    .unwrap_or_else(|| "CN".into());
                 Msg::NationalityChanged(id)
             })
             .width(Length::Fill)
@@ -712,16 +712,16 @@ fn persona_view(m: &Model) -> Element<'_, Msg> {
         .push(Space::with_height(10))
         // 2) Timezone moved up so its dropdown has room below
         .push(column![
-            text("часовой пояс").size(12).color(MUTED).font(onest_medium()),
+            text("时区").size(12).color(MUTED).font(onest_medium()),
             Space::with_height(4),
-            text_input("поиск: москва / kyiv / +5 …", &m.tz_query)
+            text_input("搜索: 上海 / tokyo / +8 …", &m.tz_query)
                 .on_input(Msg::TzQueryChanged)
                 .padding(10)
                 .font(ONEST),
             Space::with_height(6),
             pick_list(tz_labels, tz_selected, move |label: String| {
                 let m_label = label.clone();
-                let mut chosen = "Europe/Moscow".to_string();
+                let mut chosen = "Asia/Shanghai".to_string();
                 for tz in TIMEZONES.iter() {
                     let pretty = format!("{} · {} · {}", tz.city, tz.country, tz.gmt_winter);
                     if pretty == m_label {
@@ -731,7 +731,7 @@ fn persona_view(m: &Model) -> Element<'_, Msg> {
                 }
                 Msg::TzSelected(chosen)
             })
-            .placeholder("выбери из списка")
+            .placeholder("从列表中选择")
             .width(Length::Fill)
             .padding(10),
         ])
@@ -739,18 +739,18 @@ fn persona_view(m: &Model) -> Element<'_, Msg> {
         // 3) Name (with random/manual chips + dice + tournament)
         .push(column![
             row![
-                text("имя").size(12).color(MUTED).font(onest_medium()),
+                text("名字").size(12).color(MUTED).font(onest_medium()),
                 Space::with_width(Length::Fill),
-                small_choice_chip("случайное", matches!(d.name_mode, NameMode::Random), Msg::NameModeChanged(NameMode::Random)),
+                small_choice_chip("随机", matches!(d.name_mode, NameMode::Random), Msg::NameModeChanged(NameMode::Random)),
                 Space::with_width(6),
-                small_choice_chip("вручную", manual, Msg::NameModeChanged(NameMode::Manual)),
+                small_choice_chip("手动", manual, Msg::NameModeChanged(NameMode::Manual)),
                 Space::with_width(6),
-                small_choice_chip("турнир", matches!(d.name_mode, NameMode::Tournament), Msg::NameModeChanged(NameMode::Tournament)),
+                small_choice_chip("锦标赛", matches!(d.name_mode, NameMode::Tournament), Msg::NameModeChanged(NameMode::Tournament)),
             ]
             .align_y(Alignment::Center),
             Space::with_height(6),
             row![
-                text_input("Аня", &d.name)
+                text_input("小月", &d.name)
                     .on_input(Msg::NameChanged)
                     .padding(12)
                     .font(JETBRAINS)
@@ -761,7 +761,7 @@ fn persona_view(m: &Model) -> Element<'_, Msg> {
             .align_y(Alignment::Center),
             Space::with_height(4),
             text(if matches!(d.name_mode, NameMode::Tournament) {
-                "режим «турнир» спросит пары имён на следующем экране"
+                "「锦标赛」模式将在下一步显示名字对决"
             } else {
                 ""
             }).size(11).color(MUTED).font(ONEST),
@@ -770,7 +770,7 @@ fn persona_view(m: &Model) -> Element<'_, Msg> {
         // 4) Age
         .push(column![
             row![
-                text("возраст").size(12).color(MUTED).font(onest_medium()),
+                text("年龄").size(12).color(MUTED).font(onest_medium()),
                 Space::with_width(Length::Fill),
                 text(format!("{}", d.age)).size(20).font(onest_bold()).color(ACCENT),
             ]
@@ -785,7 +785,7 @@ fn persona_view(m: &Model) -> Element<'_, Msg> {
         .push(Space::with_height(10))
         // 5) Sleep preset
         .push(labelled_input(
-            "режим сна",
+            "睡眠模式",
             pick_list(sleep_options, sleep_selected, |label| {
                 let id = SLEEP_PRESETS
                     .iter()
@@ -806,18 +806,18 @@ fn persona_view(m: &Model) -> Element<'_, Msg> {
         col = col
             .push(Space::with_height(10))
             .push(container(column![
-                text("свой режим сна").size(12).color(MUTED).font(onest_medium()),
+                text("自定义睡眠时间").size(12).color(MUTED).font(onest_medium()),
                 Space::with_height(8),
                 row![
                     column![
-                        text("ложится в").size(11).color(MUTED).font(ONEST),
+                        text("入睡").size(11).color(MUTED).font(ONEST),
                         Space::with_height(2),
                         pick_list(hours.clone(), from_sel, Msg::SleepCustomFromChanged)
                             .width(Length::Fill).padding(8),
                     ].width(Length::FillPortion(1)),
                     Space::with_width(10),
                     column![
-                        text("встаёт в").size(11).color(MUTED).font(ONEST),
+                        text("起床").size(11).color(MUTED).font(ONEST),
                         Space::with_height(2),
                         pick_list(hours, to_sel, Msg::SleepCustomToChanged)
                             .width(Length::Fill).padding(8),
@@ -826,16 +826,16 @@ fn persona_view(m: &Model) -> Element<'_, Msg> {
                 .align_y(Alignment::Start),
                 Space::with_height(10),
                 row![
-                    text("шанс ночного пробуждения").size(11).color(MUTED).font(ONEST),
+                    text("半夜被吵醒概率").size(11).color(MUTED).font(ONEST),
                     Space::with_width(Length::Fill),
                     text(format!("{}%", d.sleep_custom_wake_chance))
                         .size(14).font(onest_bold()).color(ACCENT),
                 ].align_y(Alignment::Center),
                 slider(0u8..=50u8, d.sleep_custom_wake_chance, Msg::SleepCustomChanceChanged).step(1u8),
                 row![
-                    text("0% спит крепко").size(10).color(MUTED).font(ONEST),
+                    text("0% 睡得很沉").size(10).color(MUTED).font(ONEST),
                     Space::with_width(Length::Fill),
-                    text("50% полупроснувшаяся").size(10).color(MUTED).font(ONEST),
+                    text("50% 浅眠").size(10).color(MUTED).font(ONEST),
                 ],
             ].spacing(0))
             .padding(12)
@@ -885,11 +885,11 @@ fn style_view(d: &WizardData) -> Element<'_, Msg> {
         .unwrap_or_default();
 
     column![
-        h2("характер и контекст"),
-        sub("стиль общения, в каких отношениях вы стартуете, кто может ей писать."),
+        h2("性格与场景"),
+        sub("沟通风格、你们的关系阶段、谁可以给她发消息。"),
         Space::with_height(14),
         labelled_input(
-            "стиль общения",
+            "沟通风格",
             pick_list(comm_options, comm_selected, |label| {
                 let id = COMMUNICATION_PRESETS
                     .iter()
@@ -904,7 +904,7 @@ fn style_view(d: &WizardData) -> Element<'_, Msg> {
         text(comm_hint).size(12).color(MUTED).font(instrument_italic()),
         Space::with_height(10),
         labelled_input(
-            "стадия отношений",
+            "关系阶段",
             pick_list(stage_options, stage_selected, |label| {
                 let id = STAGE_PRESETS
                     .iter()
@@ -919,7 +919,7 @@ fn style_view(d: &WizardData) -> Element<'_, Msg> {
         text(stage_hint).size(12).color(MUTED).font(instrument_italic()),
         Space::with_height(10),
         labelled_input(
-            "кому отвечать",
+            "回复对象",
             pick_list(privacy_options, privacy_selected, |label| {
                 let id = PRIVACY_OPTIONS
                     .iter()
@@ -939,12 +939,12 @@ fn style_view(d: &WizardData) -> Element<'_, Msg> {
 
 fn notes_view(d: &WizardData) -> Element<'_, Msg> {
     column![
-        h2("заметки про персонажа"),
-        sub("кратко: чем занимается, чем интересуется, как любит общаться. это попадёт в long-term.md и speech.md. можно пропустить."),
+        h2("角色备注"),
+        sub("简单描述：做什么工作、兴趣爱好、沟通偏好。会写入 persona.md 和 speech.md。可以跳过。"),
         Space::with_height(14),
         labelled_input_with_paste(
-            "заметки",
-            text_input("работает дизайнером, любит лоу-фай, играет в FromSoftware…", &d.persona_notes)
+            "备注",
+            text_input("设计师，喜欢低保真音乐，玩魂系游戏…", &d.persona_notes)
                 .on_input(Msg::NotesChanged)
                 .padding(14)
                 .font(ONEST)
@@ -960,9 +960,9 @@ fn name_tournament_view(d: &WizardData) -> Element<'_, Msg> {
     use crate::config::TournamentPhase;
     let total_quals = 20u32; // mirrors TS const TOURNAMENT_ROUNDS
     let phase_label: String = match d.tournament_phase {
-        TournamentPhase::Idle => "готов?".into(),
-        TournamentPhase::Quals => format!("квалификация {} / {}", d.tournament_round + 1, total_quals),
-        TournamentPhase::Knockout => format!("финал · осталось {}", d.tournament_pool.len()),
+        TournamentPhase::Idle => "准备好了？".into(),
+        TournamentPhase::Quals => format!("预选赛 {} / {}", d.tournament_round + 1, total_quals),
+        TournamentPhase::Knockout => format!("决赛 · 还剩 {}", d.tournament_pool.len()),
     };
     let qualifiers_text = if d.tournament_qualifiers.is_empty() {
         "—".to_string()
@@ -972,18 +972,18 @@ fn name_tournament_view(d: &WizardData) -> Element<'_, Msg> {
 
     let mut col = Column::new().spacing(0);
     col = col
-        .push(h2("турнир имён"))
-        .push(sub("выбираешь интуитивно из пары — в конце останется одно. имя можно поменять и потом."))
+        .push(h2("名字锦标赛"))
+        .push(sub("凭直觉从两个名字中选一个 — 最终会留下最合适的。之后也可以随时修改。"))
         .push(Space::with_height(14))
         .push(text(phase_label).size(14).font(onest_bold()).color(ACCENT));
 
     if matches!(d.tournament_phase, TournamentPhase::Idle) {
         col = col
             .push(Space::with_height(12))
-            .push(text("на каждом раунде показываем 2 имени — выбирай то, которое нравится больше. \"мимо\" — пропустить пару.")
+            .push(text("每轮展示两个名字 — 选你更喜欢的。\"跳过\"将换一对新的。")
                 .size(13).color(MUTED).font(ONEST))
             .push(Space::with_height(16))
-            .push(primary_button("начать турнир", Msg::NameTournamentStart));
+            .push(primary_button("开始锦标赛", Msg::NameTournamentStart));
     } else {
         let a = d.tournament_pair.0.clone();
         let b = d.tournament_pair.1.clone();
@@ -996,18 +996,18 @@ fn name_tournament_view(d: &WizardData) -> Element<'_, Msg> {
             ])
             .push(Space::with_height(12))
             .push(row![
-                button(text("мимо · следующая пара").size(13).font(onest_medium()).color(INK))
+                button(text("跳过 · 下一组").size(13).font(onest_medium()).color(INK))
                     .on_press(Msg::NameTournamentSkip)
                     .padding(Padding::from([8, 16]))
                     .style(|_t, _s| ghost_button_style()),
                 Space::with_width(8),
-                button(text("начать заново").size(13).font(onest_medium()).color(MUTED))
+                button(text("重新开始").size(13).font(onest_medium()).color(MUTED))
                     .on_press(Msg::NameTournamentRestart)
                     .padding(Padding::from([8, 16]))
                     .style(|_t, _s| ghost_button_style()),
             ])
             .push(Space::with_height(12))
-            .push(text(format!("прошли в финал: {}", qualifiers_text)).size(11).color(MUTED).font(ONEST));
+            .push(text(format!("进入决赛: {}", qualifiers_text)).size(11).color(MUTED).font(ONEST));
     }
 
     col.into()
@@ -1041,21 +1041,21 @@ fn summary_view(d: &WizardData) -> Element<'_, Msg> {
         .find(|c| c.id == d.communication)
         .map(|c| c.label)
         .unwrap_or("?");
-    let mode_label = if d.mode == "bot" { "bot · @BotFather" } else { "userbot · твой telegram" };
+    let mode_label = if d.mode == "bot" { "bot · @BotFather" } else { "userbot · 你的 Telegram" };
 
     column![
-        h2("проверка"),
-        sub("ничего ещё не записано. если что-то не так, вернись назад."),
+        h2("确认"),
+        sub("尚未保存。如有问题请返回修改。"),
         Space::with_height(14),
         kv_card("telegram", mode_label),
         kv_card("ai", &format!("{} · {}", llm_label, if d.llm_model.is_empty() { "<default>" } else { d.llm_model.as_str() })),
-        kv_card("имя", &d.name),
-        kv_card("возраст", &d.age.to_string()),
-        kv_card("национальность", &d.nationality),
-        kv_card("часовой пояс", &d.tz),
-        kv_card("стиль", comm_label),
-        kv_card("стадия", stage_label),
-        kv_card("слаг профиля", &d.slug),
+        kv_card("名字", &d.name),
+        kv_card("年龄", &d.age.to_string()),
+        kv_card("国籍", &d.nationality),
+        kv_card("时区", &d.tz),
+        kv_card("风格", comm_label),
+        kv_card("阶段", stage_label),
+        kv_card("配置标识", &d.slug),
     ]
     .spacing(0)
     .into()
@@ -1066,9 +1066,9 @@ fn installing_view(m: &Model) -> Element<'_, Msg> {
     let stage = m.install_progress.stage;
     let stages: [(InstallStage, &str); 4] = [
         (InstallStage::UnpackNode, "node.exe"),
-        (InstallStage::UnpackRuntime, "cli.js + зависимости"),
-        (InstallStage::WriteConfig, "профиль и персона"),
-        (InstallStage::Done, "готово"),
+        (InstallStage::UnpackRuntime, "cli.js + 依赖"),
+        (InstallStage::WriteConfig, "配置与角色"),
+        (InstallStage::Done, "完成"),
     ];
     let mut steps_col = Column::new().spacing(8);
     for (s, label) in stages.iter() {
@@ -1105,7 +1105,7 @@ fn installing_view(m: &Model) -> Element<'_, Msg> {
 
     column![
         Space::with_height(40),
-        text("устанавливаем girl-agent")
+        text("正在安装 girl-agent")
             .size(28)
             .font(onest_bold())
             .color(INK),
@@ -1127,7 +1127,7 @@ fn installing_view(m: &Model) -> Element<'_, Msg> {
         Space::with_height(24),
         steps_col,
         Space::with_height(20),
-        text("распакуем portable-node, cli и зависимости в %APPDATA%\\girl-agent\\runtime, потом сгенерируем папку с профилем и персоной.")
+        text("将 portable-node、cli 和依赖解压到 %APPDATA%\\girl-agent\\runtime，然后生成配置与角色文件夹。")
             .size(12)
             .color(MUTED)
             .font(instrument_italic()),
@@ -1161,25 +1161,25 @@ fn done_view(m: &Model) -> Element<'_, Msg> {
 
     if let Some(err) = &m.install_error {
         return column![
-            h2("установка не дошла до конца"),
+            h2("安装未完成"),
             sub(err),
             Space::with_height(14),
-            primary_button("попробовать ещё раз", Msg::StartInstall),
+            primary_button("重试", Msg::StartInstall),
         ]
         .into();
     }
 
     column![
         Space::with_height(40),
-        text("готово").size(48).font(onest_bold()).color(ACCENT),
-        text("girl-agent установлен на этот компьютер.").size(15).color(INK).font(ONEST),
+        text("完成").size(48).font(onest_bold()).color(ACCENT),
+        text("girl-agent 已安装到此计算机。").size(15).color(INK).font(ONEST),
         Space::with_height(20),
         kv_card("runtime", &runtime),
-        kv_card("профиль", &cfg),
+        kv_card("配置", &cfg),
         Space::with_height(20),
-        primary_button("открыть приложение", Msg::LaunchAndQuit),
+        primary_button("打开应用", Msg::LaunchAndQuit),
         Space::with_height(8),
-        ghost("закрыть инсталлер", Msg::Quit),
+        ghost("关闭安装程序", Msg::Quit),
     ]
     .align_x(Alignment::Center)
     .spacing(0)
@@ -1193,9 +1193,9 @@ fn done_view(m: &Model) -> Element<'_, Msg> {
 fn nav_row(m: &Model) -> Element<'_, Msg> {
     use Step::*;
     let next_label = match m.step {
-        Welcome => "начать",
-        Summary => "установить",
-        _ => "дальше",
+        Welcome => "开始",
+        Summary => "安装",
+        _ => "下一步",
     };
 
     let next_msg = match m.step {
@@ -1224,7 +1224,7 @@ fn nav_row(m: &Model) -> Element<'_, Msg> {
     let back_btn: Element<'_, Msg> = if matches!(m.step, Welcome | Installing | Done) {
         Space::with_width(0).into()
     } else {
-        ghost("назад", Msg::Back)
+        ghost("返回", Msg::Back)
     };
 
     row![
@@ -1296,7 +1296,7 @@ fn labelled_input<'a, M: 'a>(
     .into()
 }
 
-/// Text input + a "📋 вставить" button that explicitly reads the clipboard.
+/// Text input + a "📋 粘贴" button that explicitly reads the clipboard.
 /// The button works regardless of keyboard layout (iced's built-in Ctrl+V
 /// shortcut only matches the Latin "v", which fails on Cyrillic layouts).
 pub fn labelled_input_with_paste<'a>(
@@ -1305,7 +1305,7 @@ pub fn labelled_input_with_paste<'a>(
     target: PasteTarget,
 ) -> Element<'a, Msg> {
     let label: String = label.into();
-    let paste_btn = button(text("вставить").size(11).font(onest_medium()).color(MUTED))
+    let paste_btn = button(text("粘贴").size(11).font(onest_medium()).color(MUTED))
         .on_press(Msg::PasteRequest(target))
         .padding(Padding::from([6, 12]))
         .style(|_t, _s| ghost_button_style());

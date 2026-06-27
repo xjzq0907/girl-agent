@@ -243,7 +243,7 @@ async function buildConfigFromFlags(argv: Record<string, unknown>): Promise<Prof
   const proto = preset?.proto ?? (argv.proto === "anthropic" ? "anthropic" : "openai");
   const baseURL = preset?.baseURL ?? (typeof argv["base-url"] === "string" ? (argv["base-url"] as string) : undefined);
   const model = (typeof argv.model === "string" ? (argv.model as string) : undefined) ?? preset?.defaultModel ?? "";
-  const nationality = (String(argv.nationality ?? "RU").toUpperCase() === "UA") ? "UA" : "RU";
+  const nationality = (String(argv.nationality ?? "CN").toUpperCase() === "UA") ? "UA" : (String(argv.nationality ?? "CN").toUpperCase() === "RU") ? "RU" : "CN";
   const name = argv.name ? String(argv.name) : pickRandomNames(nationality, 1)[0]!;
   const slug = String(argv.profile ?? slugifyLocal(name));
   const mode = (argv.mode === "userbot" ? "userbot" : "bot");
@@ -257,7 +257,7 @@ async function buildConfigFromFlags(argv: Record<string, unknown>): Promise<Prof
     slug,
     name,
     age: Number(argv.age),
-    nationality: nationality as "RU" | "UA",
+    nationality: nationality as "RU" | "UA" | "CN",
     tz,
     mode,
     stage: findStage(argv.stage as string).id,

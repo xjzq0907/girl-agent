@@ -107,7 +107,8 @@ export function ConfigurationPage() {
           <div className="form-row"><label>姓名</label><input className="input" value={merged.name} onChange={e => pf("name", e.target.value)} /></div>
           <div className="form-row"><label>年龄</label><input type="number" className="input" min={18} max={45} value={merged.age} onChange={e => pf("age", Number(e.target.value))} /></div>
           <div className="form-row"><label>国籍</label>
-            <select className="select" value={merged.nationality} onChange={e => pf("nationality", e.target.value as "RU" | "UA")}>
+            <select className="select" value={merged.nationality} onChange={e => pf("nationality", e.target.value as "CN" | "RU" | "UA")}>
+              <option value="CN">中国</option>
               <option value="RU">俄罗斯</option>
               <option value="UA">乌克兰</option>
             </select>
@@ -116,7 +117,7 @@ export function ConfigurationPage() {
         </div>
         <div className="form-row">
           <label>人设备注（自由文本）</label>
-          <textarea className="textarea" value={merged.personaNotes ?? ""} onChange={e => pf("personaNotes", e.target.value)} placeholder="例如：设计专业学生，喜欢猫，玩视觉小说，刚搬到莫斯科..." />
+          <textarea className="textarea" value={merged.personaNotes ?? ""} onChange={e => pf("personaNotes", e.target.value)} placeholder="例如：设计系学生，喜欢猫，爱玩视觉小说，从北京搬到了上海..." />
           <div className="hint">这些备注用于生成人设（persona.md / speech.md / communication.md）</div>
         </div>
       </div>
@@ -163,7 +164,7 @@ export function ConfigurationPage() {
             <label className="toggle">
               <input type="checkbox" checked={merged.telegram.useWSS !== false} onChange={e => pfDeep("telegram.useWSS", e.target.checked)} />
               <span className="track"><span className="knob" /></span>
-              <span>WSS（websocket，绕过俄罗斯封锁）</span>
+              <span>WSS（websocket，增强连接稳定性）</span>
             </label>
           </div>
           <div className="form-row">

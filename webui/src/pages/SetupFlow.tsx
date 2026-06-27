@@ -5,7 +5,7 @@ import { MIN_AGE, MAX_AGE, DEFAULT_AGE, clampAge } from "../lib/age-config";
 
 const TOURNAMENT_ROUNDS = 12;
 
-type TzZone = { iana: string; gmtWinter: string; city: string; country: string; aliases: string[]; group?: "UA" | "CIS" | "RU" };
+type TzZone = { iana: string; gmtWinter: string; city: string; country: string; aliases: string[]; group?: "CN" | "CIS" | "RU" };
 
 interface DraftState {
   mode: "simple" | "advanced";
@@ -13,7 +13,7 @@ interface DraftState {
   // form
   name: string;
   age: number;
-  nationality: "RU" | "UA";
+  nationality: "CN" | "RU" | "UA";
   tz: string;
   tgMode: "bot" | "userbot";
   botToken: string;
@@ -65,8 +65,8 @@ const defaultDraft = (): DraftState => ({
   step: 0,
   name: "",
   age: DEFAULT_AGE,
-  nationality: "RU",
-  tz: "Europe/Kyiv",
+  nationality: "CN",
+  tz: "Asia/Shanghai",
   tgMode: "bot",
   botToken: "",
   botApiRoot: "",
@@ -452,14 +452,14 @@ export function SetupFlow() {
 
   // 分组显示，更美观
   const tzGroups = useMemo(() => {
-    const groups: { group: "UA" | "CIS" | "RU" | "other"; zones: TzZone[] }[] = [];
+    const groups: { group: "CN" | "CIS" | "RU" | "other"; zones: TzZone[] }[] = [];
     const map = new Map<string, TzZone[]>();
     for (const z of tzFiltered) {
       const g = z.group ?? "other";
       if (!map.has(g)) map.set(g, []);
       map.get(g)!.push(z);
     }
-    for (const g of ["UA", "CIS", "RU", "other"] as const) {
+    for (const g of ["CN", "CIS", "RU", "other"] as const) {
       const zs = map.get(g);
       if (zs && zs.length) groups.push({ group: g as any, zones: zs });
     }
@@ -501,7 +501,8 @@ export function SetupFlow() {
             <div className="grid cols-2">
               <div className="form-row">
                 <label>国籍</label>
-                <select className="select" value={d.nationality} onChange={e => set("nationality", e.target.value as "RU" | "UA")}>
+                <select className="select" value={d.nationality} onChange={e => set("nationality", e.target.value as "CN" | "RU" | "UA")}>
+                  <option value="CN">中国</option>
                   <option value="RU">俄罗斯</option>
                   <option value="UA">乌克兰</option>
                 </select>
@@ -1011,10 +1012,10 @@ export function SetupFlow() {
   );
 }
 
-function groupLabel(group: "UA" | "CIS" | "RU" | "other"): string {
+function groupLabel(group: "CN" | "CIS" | "RU" | "other"): string {
   switch (group) {
-    case "UA": return "乌克兰";
-    case "CIS": return "独联体";
+    case "CN": return "中国";
+    case "CIS": return "亚洲 & 世界";
     case "RU": return "俄罗斯";
     default: return "其他";
   }

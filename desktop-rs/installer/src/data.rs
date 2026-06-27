@@ -22,6 +22,21 @@ pub struct LlmPreset {
 
 pub const LLM_PRESETS: &[LlmPreset] = &[
     LlmPreset {
+        id: "deepseek",
+        label: "DeepSeek",
+        proto: "openai",
+        base_url: Some("https://api.deepseek.com"),
+        default_model: "deepseek-v4-flash",
+        default_api_key: None,
+        api_key_required: true,
+        custom: false,
+        models: &["deepseek-v4-pro", "deepseek-v4-flash", "deepseek-chat", "deepseek-reasoner"],
+        hint: "国内推荐 · 性价比高 · 中文能力强 · deepseek-v4 系列",
+        recommended: true,
+        referral_url: None,
+        referral_label: None,
+    },
+    LlmPreset {
         id: "claudehub",
         label: "ClaudeHub",
         proto: "anthropic",
@@ -35,10 +50,10 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
             "claude-sonnet-4.6", "claude-sonnet-4.5", "claude-haiku-4.5",
             "gpt-5.5", "gpt-5.4",
         ],
-        hint: "рекомендуем · прокси для Claude / GPT · РФ, СБП, крипта · по реферальной ссылке +бонус",
-        recommended: true,
+        hint: "代理 Claude / GPT · 支持多种支付方式",
+        recommended: false,
         referral_url: Some("https://app.claudehub.fun/r/7BXGRY"),
-        referral_label: Some("открыть claudehub.fun (реферал)"),
+        referral_label: Some("打开 claudehub.fun"),
     },
     LlmPreset {
         id: "openai",
@@ -55,7 +70,7 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
             "gpt-5.3-chat-latest", "gpt-5.4-mini", "gpt-5.4-nano",
             "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini",
         ],
-        hint: "ChatGPT API · нужен ключ из platform.openai.com",
+        hint: "ChatGPT API · 需要 platform.openai.com 的 Key",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -70,7 +85,7 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
         api_key_required: false,
         custom: true,
         models: &[],
-        hint: "локально, OpenAI-совместимый эндпоинт; ключ не нужен",
+        hint: "本地运行，OpenAI 兼容端点，无需 Key",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -80,12 +95,12 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
         label: "Ollama",
         proto: "openai",
         base_url: Some("http://localhost:11434/v1"),
-        default_model: "llama3.1",
+        default_model: "qwen3",
         default_api_key: Some("ollama"),
         api_key_required: false,
         custom: true,
         models: &[],
-        hint: "локально через /v1; ключ не нужен",
+        hint: "本地运行 /v1 端点，无需 Key，推荐 qwen3 中文模型",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -103,7 +118,7 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
             "claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5-20251001",
             "claude-opus-4-6", "claude-sonnet-4-5", "claude-opus-4-1",
         ],
-        hint: "Claude · нужен ключ из console.anthropic.com",
+        hint: "Claude · 需要 console.anthropic.com 的 Key",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -123,7 +138,7 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
             "anthropic/claude-sonnet-4.6", "anthropic/claude-opus-4.7",
             "google/gemini-3.1-pro", "deepseek/deepseek-v4-pro", "x-ai/grok-4.3",
         ],
-        hint: "агрегатор моделей · openrouter.ai · приём в крипте",
+        hint: "模型聚合器 · openrouter.ai · 支持加密货币",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -141,22 +156,7 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
             "llama-3.3-70b-versatile", "llama-3.1-8b-instant",
             "llama-4-scout-17b-16e-instruct", "qwen-3-32b", "mixtral-8x7b-32768",
         ],
-        hint: "очень быстрый инференс на open-source моделях",
-        recommended: false,
-        referral_url: None,
-        referral_label: None,
-    },
-    LlmPreset {
-        id: "deepseek",
-        label: "DeepSeek",
-        proto: "openai",
-        base_url: Some("https://api.deepseek.com"),
-        default_model: "deepseek-v4-flash",
-        default_api_key: None,
-        api_key_required: true,
-        custom: false,
-        models: &["deepseek-v4-pro", "deepseek-v4-flash", "deepseek-chat", "deepseek-reasoner"],
-        hint: "deepseek-chat/reasoner deprecated 2026-07-24, бери V4",
+        hint: "极速推理 · 开源模型",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -175,7 +175,7 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
             "ministral-8b-2512", "ministral-14b-2512",
             "mistral-large-latest", "mistral-small-latest",
         ],
-        hint: "французский провайдер, Le Chat и API",
+        hint: "法国服务商 · Le Chat 和 API",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -190,7 +190,7 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
         api_key_required: true,
         custom: false,
         models: &["gemini-3.1-pro", "gemini-3-flash", "gemini-3.1-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash"],
-        hint: "Gemini через OpenAI-совместимый эндпоинт",
+        hint: "Gemini 通过 OpenAI 兼容端点",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -205,7 +205,7 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
         api_key_required: true,
         custom: false,
         models: &["grok-4.3", "grok-4.20-reasoning", "grok-4.20-non-reasoning", "grok-4", "grok-3", "grok-3-mini"],
-        hint: "Grok от xAI · ключ из console.x.ai",
+        hint: "Grok by xAI · 需要 console.x.ai 的 Key",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -225,7 +225,7 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
             "Qwen/Qwen2.5-72B-Instruct-Turbo",
             "deepseek-ai/DeepSeek-V3",
         ],
-        hint: "хостинг open-source моделей",
+        hint: "开源模型托管",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -245,7 +245,7 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
             "accounts/fireworks/models/qwen2p5-72b-instruct",
             "accounts/fireworks/models/deepseek-v3",
         ],
-        hint: "хостинг open-source моделей",
+        hint: "开源模型托管",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -260,7 +260,7 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
         api_key_required: true,
         custom: false,
         models: &["sonar-pro", "sonar", "sonar-reasoning"],
-        hint: "встроенный поиск в инференсе",
+        hint: "内置搜索的推理服务",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -275,14 +275,14 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
         api_key_required: true,
         custom: false,
         models: &["llama-3.3-70b", "llama-4-scout-17b-16e-instruct", "qwen-3-32b"],
-        hint: "ультра-быстрый инференс на чипах cerebras",
+        hint: "超快推理 · Cerebras 芯片",
         recommended: false,
         referral_url: None,
         referral_label: None,
     },
     LlmPreset {
         id: "custom-openai",
-        label: "Custom (OpenAI-compatible)",
+        label: "自定义 (OpenAI 兼容)",
         proto: "openai",
         base_url: None,
         default_model: "",
@@ -290,14 +290,14 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
         api_key_required: false,
         custom: true,
         models: &[],
-        hint: "укажи свой base URL и модель",
+        hint: "填写你自己的 Base URL 和模型名",
         recommended: false,
         referral_url: None,
         referral_label: None,
     },
     LlmPreset {
         id: "custom-anthropic",
-        label: "Custom (Anthropic-compatible)",
+        label: "自定义 (Anthropic 兼容)",
         proto: "anthropic",
         base_url: None,
         default_model: "",
@@ -305,7 +305,7 @@ pub const LLM_PRESETS: &[LlmPreset] = &[
         api_key_required: false,
         custom: true,
         models: &[],
-        hint: "укажи свой base URL и модель",
+        hint: "填写你自己的 Base URL 和模型名",
         recommended: false,
         referral_url: None,
         referral_label: None,
@@ -324,14 +324,14 @@ pub struct StagePreset {
 }
 
 pub const STAGE_PRESETS: &[StagePreset] = &[
-    StagePreset { id: "met-irl-got-tg", label: "встретились в реале — дала тг", description: "только что обменялись тг. помнит лицо, голос. лёгкий интерес." },
-    StagePreset { id: "tg-given-cold", label: "дала тг, но не убедил отвечать", description: "сомневается. часто игнорит, отвечает односложно. нужно добиваться." },
-    StagePreset { id: "tg-given-warming", label: "дала тг, отвечает осторожно", description: "оттаивает. отвечает, но коротко. тестит тебя." },
-    StagePreset { id: "convinced", label: "убедил отвечать стабильно", description: "общаетесь регулярно, флиртует, ещё не виделись после знакомства." },
-    StagePreset { id: "first-date-done", label: "сходили один раз", description: "первое свидание было, в подвешенном состоянии — нравится, но не пара." },
-    StagePreset { id: "dating-early", label: "только начали встречаться", description: "около месяца вместе. бабочки, всё внове, но границы ещё хрупкие." },
-    StagePreset { id: "dating-stable", label: "пара, общаетесь свободно", description: "стабильные отношения, шутки, бытовуха, доверие." },
-    StagePreset { id: "long-term", label: "давно вместе", description: "год+ вместе. иногда раздражение, рутина, глубокое доверие." },
+    StagePreset { id: "met-irl-got-tg", label: "线下见过面 — 加了联系方式", description: "刚交换了联系方式。记得脸和声音，有一点兴趣。" },
+    StagePreset { id: "tg-given-cold", label: "给了联系方式，但没说服她回消息", description: "还在犹豫。经常无视，回复简短。需要努力争取。" },
+    StagePreset { id: "tg-given-warming", label: "给了联系方式，回复比较谨慎", description: "态度在软化。回复了，但很短。在测试你。" },
+    StagePreset { id: "convinced", label: "愿意稳定回复", description: "定期聊天，会调情，还没再见过面。" },
+    StagePreset { id: "first-date-done", label: "约会过一次", description: "第一次约会过了，悬而未决的状态 — 有好感，但还不是情侣。" },
+    StagePreset { id: "dating-early", label: "刚开始交往", description: "在一起大约一个月。新鲜感足，一切都很新奇，但边界还脆弱。" },
+    StagePreset { id: "dating-stable", label: "情侣，自由交流", description: "稳定关系，有玩笑、日常琐事、信任。" },
+    StagePreset { id: "long-term", label: "在一起很久了", description: "一年以上。偶尔有摩擦、日常平淡，但深度信任。" },
 ];
 
 #[derive(Debug, Clone)]
@@ -347,28 +347,28 @@ pub struct CommunicationPreset {
 
 pub const COMMUNICATION_PRESETS: &[CommunicationPreset] = &[
     CommunicationPreset {
-        id: "normal", label: "нормальная",
-        description: "золотая середина — отвечает нормально, не липнет, иногда сама пишет",
+        id: "normal", label: "普通",
+        description: "适中 — 回复正常，不粘人，偶尔会主动发消息",
         notifications: "normal", message_style: "balanced", initiative: "medium", life_sharing: "medium",
     },
     CommunicationPreset {
-        id: "cute", label: "милая",
-        description: "тёплая и заботливая, часто отвечает, пишет первой, делится моментами",
+        id: "cute", label: "温柔",
+        description: "温暖贴心，经常回复，主动发消息，分享生活点滴",
         notifications: "priority", message_style: "balanced", initiative: "high", life_sharing: "high",
     },
     CommunicationPreset {
-        id: "alt", label: "альтушка",
-        description: "холодная, сухая, короткие ответы, почти не пишет первой, личным не делится",
+        id: "alt", label: "冷淡",
+        description: "冷淡、简洁、回复很短，几乎不主动发消息，不分享私事",
         notifications: "normal", message_style: "one-liners", initiative: "low", life_sharing: "low",
     },
     CommunicationPreset {
-        id: "clingy", label: "залипала",
-        description: "очень липучая, спамит пузырями, всегда онлайн, пишет первой постоянно",
+        id: "clingy", label: "粘人",
+        description: "非常粘人，连续发消息，总是在线，永远主动找你",
         notifications: "priority", message_style: "bursty", initiative: "high", life_sharing: "high",
     },
     CommunicationPreset {
-        id: "chatty", label: "болтушка",
-        description: "любит рассказывать истории, пишет длинные тексты, часто делится бытовым",
+        id: "chatty", label: "话多",
+        description: "喜欢讲故事，写长消息，经常分享日常",
         notifications: "priority", message_style: "longform", initiative: "medium", life_sharing: "high",
     },
 ];
@@ -383,25 +383,21 @@ pub struct TzEntry {
 }
 
 pub const TIMEZONES: &[TzEntry] = &[
-    TzEntry { iana: "Europe/Kaliningrad", gmt_winter: "GMT+2", city: "Калининград", country: "Россия", aliases: &["калининград", "kaliningrad", "rus"] },
-    TzEntry { iana: "Europe/Moscow", gmt_winter: "GMT+3", city: "Москва", country: "Россия", aliases: &["москва", "msk", "moscow", "питер", "санкт-петербург", "spb", "rus"] },
-    TzEntry { iana: "Europe/Samara", gmt_winter: "GMT+4", city: "Самара", country: "Россия", aliases: &["самара", "samara", "ижевск"] },
-    TzEntry { iana: "Asia/Yekaterinburg", gmt_winter: "GMT+5", city: "Екатеринбург", country: "Россия", aliases: &["екб", "yekaterinburg", "пермь", "уфа", "челябинск"] },
-    TzEntry { iana: "Asia/Omsk", gmt_winter: "GMT+6", city: "Омск", country: "Россия", aliases: &["омск", "omsk"] },
-    TzEntry { iana: "Asia/Novosibirsk", gmt_winter: "GMT+7", city: "Новосибирск", country: "Россия", aliases: &["нск", "новосибирск", "novosibirsk", "томск", "красноярск"] },
-    TzEntry { iana: "Asia/Irkutsk", gmt_winter: "GMT+8", city: "Иркутск", country: "Россия", aliases: &["иркутск", "irkutsk", "улан-удэ"] },
-    TzEntry { iana: "Asia/Yakutsk", gmt_winter: "GMT+9", city: "Якутск", country: "Россия", aliases: &["якутск", "yakutsk", "чита"] },
-    TzEntry { iana: "Asia/Vladivostok", gmt_winter: "GMT+10", city: "Владивосток", country: "Россия", aliases: &["владивосток", "vladivostok", "хабаровск"] },
-    TzEntry { iana: "Asia/Magadan", gmt_winter: "GMT+11", city: "Магадан", country: "Россия", aliases: &["магадан", "magadan", "сахалин"] },
-    TzEntry { iana: "Asia/Kamchatka", gmt_winter: "GMT+12", city: "Камчатка", country: "Россия", aliases: &["камчатка", "kamchatka", "петропавловск"] },
-    TzEntry { iana: "Europe/Kyiv", gmt_winter: "GMT+2", city: "Київ", country: "Україна", aliases: &["киев", "київ", "kyiv", "kiev", "ua", "украина", "україна", "львов", "львів", "одесса", "одеса", "харьков", "харків"] },
-    TzEntry { iana: "Europe/Minsk", gmt_winter: "GMT+3", city: "Минск", country: "Беларусь", aliases: &["минск", "minsk", "бел", "беларусь", "by"] },
-    TzEntry { iana: "Asia/Almaty", gmt_winter: "GMT+5", city: "Алматы", country: "Казахстан", aliases: &["алматы", "almaty", "kz", "казахстан", "астана", "нур-султан"] },
-    TzEntry { iana: "Asia/Tashkent", gmt_winter: "GMT+5", city: "Ташкент", country: "Узбекистан", aliases: &["ташкент", "tashkent", "uz", "узбекистан"] },
-    TzEntry { iana: "Asia/Bishkek", gmt_winter: "GMT+6", city: "Бишкек", country: "Кыргызстан", aliases: &["бишкек", "bishkek", "kg"] },
-    TzEntry { iana: "Asia/Tbilisi", gmt_winter: "GMT+4", city: "Тбилиси", country: "Грузия", aliases: &["тбилиси", "tbilisi", "ge", "грузия"] },
-    TzEntry { iana: "Asia/Yerevan", gmt_winter: "GMT+4", city: "Ереван", country: "Армения", aliases: &["ереван", "yerevan", "am", "армения"] },
-    TzEntry { iana: "Asia/Baku", gmt_winter: "GMT+4", city: "Баку", country: "Азербайджан", aliases: &["баку", "baku", "az", "азербайджан"] },
+    // 中国
+    TzEntry { iana: "Asia/Shanghai", gmt_winter: "GMT+8", city: "上海", country: "中国", aliases: &["上海", "北京", "广州", "深圳", "shanghai", "beijing", "cn", "china"] },
+    TzEntry { iana: "Asia/Urumqi", gmt_winter: "GMT+6", city: "乌鲁木齐", country: "中国", aliases: &["乌鲁木齐", "新疆", "urumqi"] },
+    // 亚洲其他
+    TzEntry { iana: "Asia/Tokyo", gmt_winter: "GMT+9", city: "东京", country: "日本", aliases: &["东京", "tokyo", "jp"] },
+    TzEntry { iana: "Asia/Seoul", gmt_winter: "GMT+9", city: "首尔", country: "韩国", aliases: &["首尔", "seoul", "kr"] },
+    TzEntry { iana: "Asia/Singapore", gmt_winter: "GMT+8", city: "新加坡", country: "新加坡", aliases: &["新加坡", "singapore", "sg"] },
+    TzEntry { iana: "Asia/Bangkok", gmt_winter: "GMT+7", city: "曼谷", country: "泰国", aliases: &["曼谷", "bangkok", "th"] },
+    // 欧美
+    TzEntry { iana: "America/New_York", gmt_winter: "GMT-5", city: "纽约", country: "美国", aliases: &["纽约", "new york", "us"] },
+    TzEntry { iana: "America/Los_Angeles", gmt_winter: "GMT-8", city: "洛杉矶", country: "美国", aliases: &["洛杉矶", "los angeles", "la"] },
+    TzEntry { iana: "Europe/London", gmt_winter: "GMT+0", city: "伦敦", country: "英国", aliases: &["伦敦", "london", "uk"] },
+    TzEntry { iana: "Europe/Paris", gmt_winter: "GMT+1", city: "巴黎", country: "法国", aliases: &["巴黎", "paris", "fr"] },
+    // 俄罗斯
+    TzEntry { iana: "Europe/Moscow", gmt_winter: "GMT+3", city: "莫斯科", country: "俄罗斯", aliases: &["莫斯科", "msk", "moscow", "rus"] },
 ];
 
 pub fn search_tz(query: &str) -> Vec<&'static TzEntry> {
@@ -422,56 +418,40 @@ pub fn search_tz(query: &str) -> Vec<&'static TzEntry> {
 
 pub fn default_tz_for_nationality(nationality: &str) -> &'static str {
     match nationality {
+        "RU" => "Europe/Moscow",
         "UA" => "Europe/Kyiv",
-        _ => "Europe/Moscow",
+        _ => "Asia/Shanghai",
     }
 }
 
 pub const NATIONALITIES: &[(&str, &str)] = &[
-    ("RU", "русская"),
-    ("UA", "украинка"),
+    ("CN", "中国"),
+    ("RU", "俄罗斯"),
+    ("UA", "乌克兰"),
 ];
 
 pub const NAMES_RU: &[&str] = &[
-    "Аня", "Алина", "Алёна", "Алиса", "Альбина", "Ася",
-    "Арина", "Ангелина", "Настя",
-    "Варя", "Лера", "Ника", "Вика", "Виолетта", "Виталина",
-    "Даша", "Диана", "Дина", "Дарина", "Доминика",
-    "Ева", "Женя", "Катя", "Лена", "Лиза", "Злата",
-    "Ира", "Инна", "Ксюша", "Кира", "Кристина", "Карина", "Камилла",
-    "Лиля", "Маша", "Марина", "Рита", "Милана", "Милена", "Мила", "Мира", "Майя",
-    "Надя", "Наташа", "Настя", "Нина",
-    "Оля", "Оксана", "Полина", "Поля", "Олеся", "Олена",
-    "Соня", "София", "Стася", "Снежана",
-    "Таня", "Тоня",
-    "Ульяна", "Уля",
-    "Юля", "Юлиана",
-    "Яна", "Яся",
+    "小月", "诗雨", "思涵", "晓雪", "雨晴",
+    "梦琪", "静怡", "雅婷", "欣然", "若曦",
+    "子涵", "梓萱", "语嫣", "雨桐", "安琪",
+    "佳怡", "婉清", "念慈", "清瑶", "心怡",
+    "忆南", "乐瑶", "曼琳", "芷若", "碧萱",
+    "悦悦", "甜甜", "萌萌", "朵朵", "可可",
+    "念念", "悠悠", "浅浅", "小鹿", "阿宁",
 ];
 
 pub const NAMES_UA: &[&str] = &[
-    "Анна", "Альона", "Аліна", "Аліса", "Анастасія",
-    "Богдана", "Валерія", "Вікторія", "Віолетта",
-    "Дарина", "Діана", "Дарія",
-    "Євгенія", "Єлизавета",
-    "Злата", "Зоряна",
-    "Ірина", "Інна",
-    "Катерина", "Карина", "Кіра", "Ксенія",
-    "Лілія", "Лариса", "Леся",
-    "Марія", "Маріанна", "Мілана", "Мілена",
-    "Надія", "Наталія", "Наталка", "Ніна",
-    "Оксана", "Олена", "Олеся", "Ольга",
-    "Поліна", "Перелесниця",
-    "Світлана", "Софія", "Соломія",
-    "Таїсія", "Тетяна",
-    "Уляна",
-    "Христина",
-    "Юлія", "Юліана",
-    "Яна", "Ярина",
+    "小月", "诗雨", "思涵", "晓雪", "雨晴",
+    "梦琪", "静怡", "雅婷", "欣然", "若曦",
+    "子涵", "梓萱", "语嫣", "雨桐", "安琪",
+    "佳怡", "婉清", "念慈", "清瑶", "心怡",
+    "忆南", "乐瑶", "曼琳", "芷若", "碧萱",
+    "悦悦", "甜甜", "萌萌", "朵朵", "可可",
+    "念念", "悠悠", "浅浅", "小鹿", "阿宁",
 ];
 
 pub fn pick_random_name(nationality: &str, seed: u64) -> &'static str {
-    let pool: &[&str] = if nationality == "UA" { NAMES_UA } else { NAMES_RU };
+    let pool: &[&str] = NAMES_RU;
     let idx = (seed as usize) % pool.len();
     pool[idx]
 }
@@ -487,63 +467,35 @@ pub struct SleepPreset {
 }
 
 pub const SLEEP_PRESETS: &[SleepPreset] = &[
-    SleepPreset { id: "standard", label: "обычный", description: "00:00 — 09:00 · ~5% что разбудит сообщение", from_h: 0, to_h: 9, wake_chance: 0.05 },
-    SleepPreset { id: "late", label: "сова", description: "02:00 — 11:00 · поздно ложится, поздно встаёт", from_h: 2, to_h: 11, wake_chance: 0.05 },
-    SleepPreset { id: "early", label: "жаворонок", description: "22:00 — 07:00 · рано спать, рано на работу", from_h: 22, to_h: 7, wake_chance: 0.04 },
-    SleepPreset { id: "owl", label: "не спит до утра", description: "04:00 — 13:00 · ночной образ жизни", from_h: 4, to_h: 13, wake_chance: 0.08 },
-    SleepPreset { id: "custom", label: "кастом", description: "задай свой режим сна", from_h: 0, to_h: 0, wake_chance: 0.0 },
+    SleepPreset { id: "standard", label: "标准", description: "23:00 — 08:00 · ~5% 被消息吵醒", from_h: 23, to_h: 8, wake_chance: 0.05 },
+    SleepPreset { id: "late", label: "夜猫子", description: "02:00 — 11:00 · 晚睡晚起", from_h: 2, to_h: 11, wake_chance: 0.05 },
+    SleepPreset { id: "early", label: "早起型", description: "22:00 — 07:00 · 早睡早起", from_h: 22, to_h: 7, wake_chance: 0.04 },
+    SleepPreset { id: "owl", label: "通宵", description: "04:00 — 13:00 · 日夜颠倒", from_h: 4, to_h: 13, wake_chance: 0.08 },
+    SleepPreset { id: "custom", label: "自定义", description: "自己设置睡眠时间", from_h: 0, to_h: 0, wake_chance: 0.0 },
 ];
 
 pub const PRIVACY_OPTIONS: &[(&str, &str, &str)] = &[
-    ("owner-only", "только владельцу", "отвечает только тебе. незнакомцам — игнор."),
-    ("allow-strangers", "всем, кто пишет", "отвечает кому угодно — нужно для bot-режима в группах."),
+    ("owner-only", "仅限主人", "只回复你。陌生人会被忽略。"),
+    ("allow-strangers", "所有人", "回复任何发消息的人 — 用于群聊 Bot 模式。"),
 ];
 
 pub fn slugify(name: &str) -> String {
-    let mapped: String = name
-        .chars()
-        .map(|c| {
-            if c.is_ascii_alphanumeric() {
-                c.to_ascii_lowercase()
-            } else {
-                match c {
-                    'а'..='я' | 'А'..='Я' | 'ё' | 'Ё' | 'і' | 'І' | 'ї' | 'Ї' | 'є' | 'Є' | 'ґ' | 'Ґ' => {
-                        translit_ru(c)
-                    }
-                    _ => '-',
+    name.chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+        .map(|c| c.to_ascii_lowercase())
+        .fold(String::new(), |mut acc, c| {
+            if c == '-' || c == '_' {
+                if !acc.is_empty() && !acc.ends_with('-') {
+                    acc.push('-');
                 }
+            } else {
+                acc.push(c);
             }
+            acc
         })
-        .collect();
-    let mut prev_dash = false;
-    let mut out = String::new();
-    for c in mapped.chars() {
-        if c == '-' {
-            if !prev_dash && !out.is_empty() {
-                out.push('-');
-                prev_dash = true;
-            }
-        } else {
-            out.push(c);
-            prev_dash = false;
-        }
-    }
-    let trimmed = out.trim_matches('-').to_string();
-    if trimmed.is_empty() {
-        "persona".to_string()
-    } else {
-        trimmed
-    }
-}
-
-fn translit_ru(c: char) -> char {
-    let lower = c.to_lowercase().next().unwrap_or(c);
-    match lower {
-        'а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd', 'е' | 'ё' | 'є' => 'e',
-        'ж' => 'z', 'з' => 'z', 'и' | 'і' | 'ї' => 'i', 'й' => 'y', 'к' => 'k', 'л' => 'l',
-        'м' => 'm', 'н' => 'n', 'о' => 'o', 'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't',
-        'у' => 'u', 'ф' => 'f', 'х' => 'h', 'ц' => 'c', 'ч' => 'c', 'ш' => 's', 'щ' => 's',
-        'ъ' | 'ь' => '-', 'ы' => 'y', 'э' => 'e', 'ю' => 'u', 'я' => 'a', 'ґ' => 'g',
-        _ => '-',
-    }
+        .trim_matches('-')
+        .to_string()
+        .chars()
+        .take(40)
+        .collect()
 }

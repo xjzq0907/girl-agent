@@ -58,12 +58,8 @@ export async function generatePersonaPack(
   const existing = await readExistingPersona(slug);
   if (existing) return existing;
 
-  const country = nationality === "CN" ? "中国" : nationality === "UA" ? "乌克兰" : "俄罗斯/独联体";
-  const langHint = nationality === "CN"
-    ? "使用中文书写，像国内社交软件上的普通女生一样打字。自然的口语化表达，偶尔打错字（手机键盘误触），不写书面语。"
-    : nationality === "UA"
-    ? "使用中文书写，像国内社交软件上的普通女生一样打字。自然的口语化表达，偶尔打错字（手机键盘误触），不写书面语。"
-    : "俄语书写，不带乌克兰语混合。";
+  const country = nationality === "RU" ? "俄罗斯" : nationality === "UA" ? "乌克兰" : "中国";
+  const langHint = "使用中文书写，像国内社交软件上的普通女生一样打字。自然的口语化表达，偶尔打错字（手机键盘误触），不写书面语。";
   const notes = personaNotes.trim()
     ? `\n\n# 用户对角色设定的补充要求\n${personaNotes.trim()}\n\n在生成 persona.md、speech.md 和 communication.md 时考虑这些要求，但不要把角色变成理想化/讨喜的幻想。如果要求与现实感冲突，要进行现实化调整。`
     : "";

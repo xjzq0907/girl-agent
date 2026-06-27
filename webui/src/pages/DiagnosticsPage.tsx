@@ -37,9 +37,9 @@ export function DiagnosticsPage() {
       </div>
 
       <div className="card">
-        <div className="card-header"><div className="h-title">VPN / 代理</div></div>
-        <div className="hint">girl-agent 默认使用 WSS (websocket) 连接 Telegram — 可绕过大多数封锁。<br />
-          如果从俄罗斯无法连接到 LLM — 选择预设 <strong>ClaudeHub</strong>：无需 VPN 即可使用。<br />
+        <div className="card-header"><div className="h-title">网络连接</div></div>
+        <div className="hint">girl-agent 默认使用 WSS (websocket) 连接 Telegram — 可绕过大多数网络封锁。<br />
+          如果无法连接到 LLM API — 在 <strong>配置 → LLM</strong> 中选择合适的服务商。<br />
           如果有自己的代理 — 在 <strong>配置 → Telegram → 代理</strong> 中设置。</div>
       </div>
     </div>

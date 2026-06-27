@@ -213,7 +213,7 @@ impl App {
                             self.model.data.tg_session_string = s.session_string;
                             self.model.data.tg_resolved_api_id = s.api_id.to_string();
                             self.model.data.tg_resolved_api_hash = s.api_hash;
-                            self.model.tg_status.note = Some("вход выполнен".into());
+                            self.model.tg_status.note = Some("登录成功".into());
                             self.model.step = Step::LlmPicker;
                         } else if let Some(token) = out.needs_2fa_login_token {
                             self.model.data.tg_login_token = token;

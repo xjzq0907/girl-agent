@@ -47,12 +47,12 @@ pub fn send_code(phone: &str) -> Result<SendCodeResult> {
         .into_json()
         .map_err(|e| anyhow!("/send-code parse: {e}"))?;
     if let Some(err) = resp.get("error").and_then(|v| v.as_str()) {
-        return Err(anyhow!("прокси: {err}"));
+        return Err(anyhow!("代理: {err}"));
     }
     let token = resp
         .get("loginToken")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow!("прокси не вернул loginToken"))?;
+        .ok_or_else(|| anyhow!("代理未返回 loginToken"))?;
     Ok(SendCodeResult {
         login_token: token.to_string(),
     })
@@ -67,17 +67,17 @@ pub fn verify_code(login_token: &str, code: &str) -> Result<VerifyCodeResult> {
         .into_json()
         .map_err(|e| anyhow!("/verify-code parse: {e}"))?;
     if let Some(err) = resp.get("error").and_then(|v| v.as_str()) {
-        return Err(anyhow!("прокси: {err}"));
+        return Err(anyhow!("代理: {err}"));
     }
     if resp.get("needs2fa").and_then(|v| v.as_bool()).unwrap_or(false) {
         let lt = resp
             .get("loginToken")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow!("прокси не вернул loginToken для 2FA"))?
+            .ok_or_else(|| anyhow!("代理未返回 2FA 的 loginToken"))?
             .to_string();
         return Ok(VerifyCodeResult::Needs2Fa { login_token: lt });
     }
-    let success: AuthSuccess = serde_json::from_value(resp).map_err(|e| anyhow!("разбор ответа: {e}"))?;
+    let success: AuthSuccess = serde_json::from_value(resp).map_err(|e| anyhow!("解析响应: {e}"))?;
     Ok(VerifyCodeResult::Success(success))
 }
 
@@ -90,8 +90,8 @@ pub fn verify_password(login_token: &str, password: &str) -> Result<AuthSuccess>
         .into_json()
         .map_err(|e| anyhow!("/verify-password parse: {e}"))?;
     if let Some(err) = resp.get("error").and_then(|v| v.as_str()) {
-        return Err(anyhow!("прокси: {err}"));
+        return Err(anyhow!("代理: {err}"));
     }
-    let success: AuthSuccess = serde_json::from_value(resp).map_err(|e| anyhow!("разбор ответа: {e}"))?;
+    let success: AuthSuccess = serde_json::from_value(resp).map_err(|e| anyhow!("解析响应: {e}"))?;
     Ok(success)
 }
