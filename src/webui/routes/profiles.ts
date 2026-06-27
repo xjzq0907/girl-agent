@@ -14,6 +14,7 @@ import { applyLLMUpdate, describeLLM, resolveLLMUpdate } from "../../config/llm-
 import { findPreset } from "../../presets/llm.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { readStatsRange } from "../../engine/stats.js";
 
 const MEMORY_FILES = [
   "persona.md",
@@ -200,6 +201,17 @@ export function registerProfileRoutes(r: Router): void {
     const rel = await readRelationship(slug);
     const stage = findStage(rel.stage);
     return { stage: { id: stage.id, num: stage.num, label: stage.label }, score: rel.score };
+  });
+
+  // 对话统计：最近 N 天（默认 7，最多 180）
+  r.get("/api/profiles/:slug/stats", async ({ params, searchParams }) => {
+    const slug = params.slug ?? "";
+    const cfg = await readConfig(slug);
+    if (!cfg) throw new HttpError(404, "profile not found");
+    const daysRaw = Number(searchParams.get("days") ?? 7);
+    const days = Math.max(1, Math.min(180, Number.isFinite(daysRaw) ? Math.floor(daysRaw) : 7));
+    const stats = await readStatsRange(slug, cfg.tz, days);
+    return { days, stats };
   });
 
   // Memory files

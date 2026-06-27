@@ -165,6 +165,10 @@ export interface ProfileConfig {
   communication?: CommunicationProfile;
   personaNotes?: string;
   busySchedule?: BusySlot[];
+  /** 用户的生日，YYYY-MM-DD 或 MM-DD。可选；用于节假日感知触发主动消息。 */
+  birthday?: string;
+  /** 角色（她）的生日，YYYY-MM-DD 或 MM-DD。可选。 */
+  characterBirthday?: string;
 }
 
 export interface RelationshipScore {
@@ -201,6 +205,11 @@ export interface BehaviorTickResult {
     newText: string;
     reason?: string;
   };
+  /**
+   * 梦话：仅在睡眠状态收到消息时偶发。设置后，runtime 直接发送该字段作为回复，
+   * 跳过 LLM 调用、system prompt 和 shouldRead=true 的副作用。
+   */
+  sleepTalk?: string;
 }
 
 export type DeletionAwareness = "saw-and-read" | "saw-not-read" | "missed";

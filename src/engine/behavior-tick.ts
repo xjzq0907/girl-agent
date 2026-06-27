@@ -154,9 +154,38 @@ export async function behaviorTick(
   // warm vibe——降低随机无视概率
   const ignoreMul = ignoreMultiplier(communication, ignoreTendency);
 
-  // 如果正在睡觉——几乎总是无视
+  // 如果正在睡觉——几乎总是无视，但偶发梦话
   const sleepIgnoreMul = communication.notifications === "priority" ? 0.8 : communication.notifications === "muted" ? 1 : 0.9;
-  if (ctx.presence?.asleep && !ctx.presence.nightAwake && Math.random() < 0.85 * sleepIgnoreMul) {
+  if (ctx.presence?.asleep && !ctx.presence.nightAwake) {
+    const sleepRoll = Math.random();
+    // ~65% 完全无视（不读不回复）
+    if (sleepRoll < 0.65 * sleepIgnoreMul) {
+      return {
+        shouldReply: false,
+        shouldRead: false,
+        delaySec: 0,
+        bubbles: 1,
+        typing: false,
+        ignoreReason: "asleep",
+        moodDelta: {},
+        intent: "left-on-read"
+      };
+    }
+    // ~20% 梦话模式：发一条 2-4 字含糊内容（不读消息，延迟发出，纯本地随机，不耗 LLM）
+    if (sleepRoll < 0.85 * sleepIgnoreMul) {
+      return {
+        shouldReply: true,
+        shouldRead: false,
+        delaySec: 180 + Math.random() * 720, // 3-15 分钟延迟，看起来像半梦半醒随手打的
+        bubbles: 1,
+        typing: true,
+        ignoreReason: undefined,
+        moodDelta: {},
+        intent: "short",
+        sleepTalk: pickSleepTalk()
+      };
+    }
+    // 其余 ~15% 仍然 left-on-read
     return {
       shouldReply: false,
       shouldRead: false,
@@ -359,4 +388,11 @@ function normalizeBubbles(value: number, profile: CommunicationProfile, intent: 
 
 function clamp(n: number, a: number, b: number): number {
   return Math.max(a, Math.min(b, Number(n) || 0));
+}
+
+// 梦话片段 — 睡眠状态偶发的短回复，纯本地随机。
+const SLEEP_TALK_FRAGMENTS = ["嗯…", "嗯", "zzz", "困…", "嗯哼", "哦…", "嗯啊", "zz", "嗯好"] as const;
+
+function pickSleepTalk(): string {
+  return SLEEP_TALK_FRAGMENTS[Math.floor(Math.random() * SLEEP_TALK_FRAGMENTS.length)];
 }

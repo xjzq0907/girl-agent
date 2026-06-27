@@ -12,6 +12,7 @@ import { AddonsPage } from "./pages/AddonsPage";
 import { AssistantPage } from "./pages/AssistantPage";
 import { RelationshipPage } from "./pages/RelationshipPage";
 import { DiagnosticsPage } from "./pages/DiagnosticsPage";
+import { StatsPage } from "./pages/StatsPage";
 import { SetupFlow } from "./pages/SetupFlow";
 import { AuthGate } from "./components/AuthGate";
 
@@ -54,6 +55,7 @@ export function App() {
             {tab === "addons" && <AddonsPage />}
             {tab === "assistant" && <AssistantPage />}
             {tab === "relationship" && <RelationshipPage />}
+            {tab === "stats" && <StatsPage />}
             {tab === "diagnostics" && <DiagnosticsPage />}
           </div>
         </div>

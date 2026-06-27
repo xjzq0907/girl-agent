@@ -6,6 +6,7 @@ import { communicationDecisionState, normalizeCommunicationProfile } from "../pr
 import type { DailyLife } from "./daily-life.js";
 import type { ConflictState } from "./conflict.js";
 import { searchPalaceDrawers } from "./memory-palace.js";
+import { getTodayOccasions, renderOccasionsPrompt, type Occasion } from "../data/holidays.js";
 
 /**
  * Agenda engine — 她会在心里记下"他明天有比赛"，
@@ -378,9 +379,13 @@ export async function ensureAutonomousAgenda(
   ].filter(Boolean).join("\n\n");
 
   let items: AutonomousItem[] = [];
+  // 节假日感知 — 把今天的节日 / 生日注入 LLM context，让她生成相关主动消息
+  const nowDate = new Date();
+  const todayOccasions = getTodayOccasions(nowDate, cfg);
+  const occasionFragment = renderOccasionsPrompt(todayOccasions);
   try {
     const raw = await llm.chat(
-      [{ role: "system", content: SYS_AUTONOMOUS }, { role: "user", content: TEMPLATE_AUTONOMOUS(stateBlock, dailyLife, histStr, agenda, new Date().toISOString(), cfg.tz, maxItems - pendingSoon.length) }],
+      [{ role: "system", content: SYS_AUTONOMOUS }, { role: "user", content: TEMPLATE_AUTONOMOUS(stateBlock, dailyLife, histStr, agenda, new Date().toISOString(), cfg.tz, maxItems - pendingSoon.length) + (occasionFragment ? `\n\n${occasionFragment}` : "") }],
       { temperature: 0.8, maxTokens: 3500, json: true }
     );
     const parsed = JSON.parse(raw);
@@ -406,9 +411,63 @@ export async function ensureAutonomousAgenda(
       history: [`autonomous:${dateKey}`]
     });
   }
+
+  // 节假日兜底：如果今天有节日但 LLM 没生成相关 item，确保至少追加一条 importance=3 的 item
+  if (todayOccasions.length > 0 && !occasionCoveredByAgenda(agenda, todayOccasions)) {
+    const occ = todayOccasions[0]!;
+    const pingAt = computeOccasionPingAt(now, horizon, cfg, dailyLife);
+    if (pingAt) {
+      agenda.push({
+        id: `auto_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        about: `节日相关：${occ.name}`,
+        pingAt,
+        reason: occ.vibe,
+        importance: 3,
+        state: "pending",
+        attempts: 0,
+        chatId,
+        createdAt: new Date().toISOString(),
+        history: [`autonomous:${dateKey}`, `occasion:${occ.kind}/${occ.name}`]
+      });
+      selected.push({
+        about: `节日相关：${occ.name}`,
+        pingAt,
+        reason: occ.vibe,
+        importance: 3
+      });
+    }
+  }
+
   if (selected.length) await writeAgenda(cfg.slug, agenda);
   await writeMd(cfg.slug, statePath, `${state.trim()}\nautonomous:${dateKey} created=${selected.length}`.trim() + "\n");
   return { created: selected.length };
+}
+
+/**
+ * 检查当前 agenda 中是否已有节日相关条目（粗匹配节日名）。
+ */
+function occasionCoveredByAgenda(agenda: AgendaItem[], occasions: Occasion[]): boolean {
+  const lc = agenda.map(a => a.about.toLowerCase());
+  return occasions.some(o => lc.some(a => a.includes(o.name.toLowerCase())));
+}
+
+/**
+ * 给节日选一个合适的 pingAt：现在 + 30~120 分钟之间的随机，
+ * 跳过睡眠时段和 phoneAvailable=false 的 block。
+ */
+function computeOccasionPingAt(
+  now: number,
+  horizon: number,
+  cfg: ProfileConfig,
+  dailyLife: DailyLife | undefined
+): string | null {
+  const delayMin = 30 + Math.random() * 90;
+  const t = now + delayMin * 60_000;
+  if (t > horizon) return null;
+  const date = new Date(t);
+  if (isDuringSleep(cfg, date)) return null;
+  if (dailyLife && isDuringUnavailableBlock(dailyLife, cfg, date)) return null;
+  return date.toISOString();
 }
 
 export async function reconcileAgendaAfterConflict(

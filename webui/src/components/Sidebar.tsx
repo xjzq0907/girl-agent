@@ -6,6 +6,7 @@ const ITEMS: { id: Tab; label: string; icon: string }[] = [
   { id: "assistant", label: "助手", icon: "✦" },
   { id: "logs", label: "日志 / 状态", icon: "≡" },
   { id: "relationship", label: "关系", icon: "♥" },
+  { id: "stats", label: "统计", icon: "▦" },
   { id: "configuration", label: "配置", icon: "⚙" },
   { id: "memory", label: "记忆", icon: "❀" },
   { id: "addons", label: "插件", icon: "◉" },

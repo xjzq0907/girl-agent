@@ -309,6 +309,26 @@ export async function listDailySummaries(slug: string): Promise<string[]> {
   } catch { return []; }
 }
 
+/** 心情日记（第一人称，YAML frontmatter + 正文）。存放在 data/<slug>/diary/YYYY-MM-DD.md */
+export async function writeDiary(slug: string, day: string, content: string): Promise<void> {
+  await writeMd(slug, `diary/${day}.md`, content);
+}
+
+export async function readDiary(slug: string, day: string): Promise<string> {
+  return stripLogMetadata(await readMd(slug, `diary/${day}.md`));
+}
+
+export async function listDiaryDays(slug: string): Promise<string[]> {
+  try {
+    const dir = path.join(profileDir(slug), "diary");
+    const files = await fs.readdir(dir);
+    return files
+      .filter(f => /^\d{4}-\d{2}-\d{2}\.md$/.test(f))
+      .map(f => f.replace(/\.md$/, ""))
+      .sort();
+  } catch { return []; }
+}
+
 /** 在所有每日摘要中进行简单搜索（子字符串 + 单词匹配）。返回最相关的前 N 天。 */
 export async function searchDailySummaries(slug: string, query: string, limit = 5): Promise<{ day: string; excerpt: string; score: number }[]> {
   const days = await listDailySummaries(slug);

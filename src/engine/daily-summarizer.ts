@@ -8,6 +8,7 @@ import {
   listSessionDays, sessionDate, stripLogMetadata
 } from "../storage/md.js";
 import { mineDailyLogToPalace } from "./memory-palace.js";
+import { buildDiary, hasDiary } from "./diary.js";
 
 const SYS = `你是女孩的内部日记。根据当天她的聊天原始日志，为长期记忆写一份简要摘要。以第一人称，用她的语气（小写，不使用markdown）。内容包括：发生了什么、讨论了什么、她最终对他的看法、关于他的新发现、是否有让她恼火的事。`;
 
@@ -105,7 +106,13 @@ export async function closeStaleSessions(llm: LLMClient, cfg: ProfileConfig): Pr
     const existing = await readDailySummary(cfg.slug, day);
     if (existing) continue;
     const r = await buildDailySummary(llm, cfg, day);
-    if (r) made++;
+    if (r) {
+      made++;
+      // 心情日记：仅在有聊天时生成，避免空文件
+      if (!(await hasDiary(cfg.slug, day))) {
+        await buildDiary(llm, cfg, day).catch(() => null);
+      }
+    }
   }
   return made;
 }
@@ -113,5 +120,8 @@ export async function closeStaleSessions(llm: LLMClient, cfg: ProfileConfig): Pr
 export async function closeCurrentSession(llm: LLMClient, cfg: ProfileConfig): Promise<boolean> {
   const today = sessionDate(cfg.tz);
   const r = await buildDailySummary(llm, cfg, today);
+  if (r && !(await hasDiary(cfg.slug, today))) {
+    await buildDiary(llm, cfg, today).catch(() => null);
+  }
   return !!r;
 }

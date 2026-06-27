@@ -162,6 +162,24 @@ export const api = {
   async getRelationship(slug: string) {
     return req<{ stage: { id: string; num: number; label: string }; score: { interest: number; trust: number; attraction: number; annoyance: number; cringe: number } }>("GET", `/api/profiles/${encodeURIComponent(slug)}/relationship`);
   },
+  async getStats(slug: string, days = 7) {
+    return req<{
+      days: number;
+      stats: Array<{
+        date: string;
+        received: number;
+        replied: number;
+        ignored: number;
+        avgReplyDelaySec: number;
+        maxReplyDelaySec: number;
+        hourBuckets: number[];
+        userCharTotal: number;
+        herCharTotal: number;
+        topics: string[];
+        updatedAt: string;
+      }>;
+    }>("GET", `/api/profiles/${encodeURIComponent(slug)}/stats?days=${days}`);
+  },
   async listMemoryFiles(slug: string) {
     return req<{ files: { path: string; size: number; mtime: number }[] }>("GET", `/api/profiles/${encodeURIComponent(slug)}/memory`);
   },

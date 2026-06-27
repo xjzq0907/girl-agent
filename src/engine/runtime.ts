@@ -6,7 +6,8 @@ import { behaviorTick } from "./behavior-tick.js";
 import { applyMoodDelta, maybeReflect } from "./reflect.js";
 import {
   appendSessionLog, appendSharedMemory, readRelationship, writeRelationship, writeConfig, writeMd,
-  readAgenda, writeAgenda, readRecentSessionTurns, readMd, sessionDate, normalizeOwnerId, profileDir, stripLogMetadata
+  readAgenda, writeAgenda, readRecentSessionTurns, readMd, sessionDate, normalizeOwnerId, profileDir, stripLogMetadata,
+  listSessionDays
 } from "../storage/md.js";
 import { findStage } from "../presets/stages.js";
 import { communicationProfileLabel, normalizeCommunicationProfile } from "../presets/communication.js";
@@ -20,6 +21,8 @@ import {
   clearConflict, logConflictToMemory
 } from "./conflict.js";
 import { closeCurrentSession, closeStaleSessions } from "./daily-summarizer.js";
+import { applyRelationshipDecay, daysBetween } from "./decay.js";
+import { recordStats as recordDailyStats } from "./stats.js";
 import { loadRealismContext, maybeAdvanceRelationshipTimeline, recordInteractionMemory } from "./realism.js";
 import { mineUnminedDailyLogs } from "./memory-palace.js";
 import { describeIncomingMedia, imagePartFromMedia, memeDetectionInstruction } from "./media.js";
@@ -81,6 +84,7 @@ export class Runtime extends EventEmitter {
   private dailyLife?: DailyLife;
   private dailyLifeDate?: string;
   private lastStage?: string;
+  private lastDecayDate?: string;
   /** Mapping firedItemId -> chatId where ping was sent，用于确定其主动消息和处理回复。 */
   private pendingProactive = new Map<string, { itemId: string; about: string; sentAt: number }>();
   private lastUserMsgTs = new Map<string, number>();
@@ -596,6 +600,33 @@ false — 如果回复暴露了她是 AI/Claude/ChatGPT/助手/模型，提到�
     if (made > 0) this.emit("event", { type: "info", text: `daily summaries: +${made}` } as RuntimeEvent);
     const mined = await mineUnminedDailyLogs(this.llm, this.cfg, 2).catch(() => 0);
     if (mined > 0) this.emit("event", { type: "info", text: `memory palace drawers: +${mined}` } as RuntimeEvent);
+
+    // 关系自然衰减：每日一次（按本地日期切换），仅当今天没聊天才衰减
+    await this.maybeRunRelationshipDecay(today);
+  }
+
+  /**
+   * 长期不聊天时分数缓慢衰减。每天每个 profile 只跑一次（按本地日期）。
+   * 只有"今天没聊过天"才衰减，避免惩罚活跃用户。
+   */
+  private async maybeRunRelationshipDecay(today: string): Promise<void> {
+    if (this.lastDecayDate === today) return;
+    this.lastDecayDate = today;
+    try {
+      const days = await listSessionDays(this.cfg.slug);
+      if (!days.length) return;
+      const lastChatDay = days[days.length - 1]!;
+      if (lastChatDay >= today) return; // 今天或之前刚聊过天
+      const elapsed = daysBetween(lastChatDay, today);
+      if (elapsed < 1) return;
+      const rel = await readRelationship(this.cfg.slug);
+      const newScore = applyRelationshipDecay(rel.score, elapsed);
+      if (scoresEqual(rel.score, newScore)) return;
+      await writeRelationship(this.cfg.slug, { ...rel, score: newScore });
+      this.emit("event", { type: "info", text: `relationship decay: ${elapsed}d silent → score updated` } as RuntimeEvent);
+    } catch (e) {
+      this.emit("event", { type: "error", text: "decay: " + silentErrorLabel(e) } as RuntimeEvent);
+    }
   }
 
   /**
@@ -788,6 +819,15 @@ false — 如果回复暴露了她是 AI/Claude/ChatGPT/助手/模型，提到�
     const tick = await behaviorTick(this.llm, this.cfg, hist, incomingText, {
       presence, conflict, conflictColdActive: coldActive, blockHint, activeDialog, recentIncomingIds
     });
+
+    // 统计：每次收到用户消息都记一次 received + hour bucket + user chars
+    const recvHour = localHour(this.cfg.tz);
+    recordDailyStats(this.cfg.slug, this.cfg.tz, s => {
+      s.received += 1;
+      s.userCharTotal += incomingText.length;
+      s.hourBuckets[recvHour] = (s.hourBuckets[recvHour] ?? 0) + 1;
+      if (!tick.shouldReply) s.ignored += 1;
+    }).catch(() => {});
     // 注：互斥锁已保证同聊天串行，不再需要 seq 竞态检查
     const baseDecision: DecisionSnapshot = {
       chatId: m.chatId,
@@ -907,6 +947,17 @@ false — 如果回复暴露了她是 AI/Claude/ChatGPT/助手/模型，提到�
     presenceHint?: string
   ): Promise<void> {
     if (this.paused) return;
+    // 梦话模式：跳过 LLM，直接发送预设的含糊片段
+    if (tick.sleepTalk) {
+      const sent = await this.sendBubbles(chatId, [tick.sleepTalk], hist, scope, tick.typing);
+      this.setDecisionStatus(this.histKey(chatId), sent.length ? "sent" : "fallback", sent.length ? undefined : "梦话发送失败");
+      // 统计：梦话也算回复
+      recordDailyStats(this.cfg.slug, this.cfg.tz, s => {
+        s.replied += 1;
+        s.herCharTotal += sent.join("").length;
+      }).catch(() => {});
+      return;
+    }
     // 将 daily-life、conflict、recall 整合到 system-prompt
     const conflict = scope === "primary" ? await readConflict(this.cfg.slug) : undefined;
     const lastUser = hist[hist.length - 1]?.role === "user" ? hist[hist.length - 1]?.content : undefined;
@@ -972,6 +1023,21 @@ false — 如果回复暴露了她是 AI/Claude/ChatGPT/助手/模型，提到�
     this.setDecisionStatus(this.histKey(chatId), sent.length ? "sent" : "fallback", sent.length ? undefined : "所有气泡为空/重复");
     if (scope === "primary") {
       recordInteractionMemory(this.llm, this.cfg, lastUser ?? "", sent.join(" / "), typeof chatId === "number" ? chatId : undefined, "primary").catch(() => {});
+    }
+    // 统计：记录回复 + 延迟 + 字符数
+    const replyChars = sent.join("").length;
+    const replyDelay = Math.max(0, Math.round(tick.delaySec ?? 0));
+    if (sent.length > 0) {
+      recordDailyStats(this.cfg.slug, this.cfg.tz, s => {
+        s.replied += 1;
+        s.herCharTotal += replyChars;
+        if (replyDelay > 0) {
+          const newCount = s.replied;
+          const newTotal = s.avgReplyDelaySec * (newCount - 1) + replyDelay;
+          s.avgReplyDelaySec = Math.round(newTotal / newCount);
+          if (replyDelay > s.maxReplyDelaySec) s.maxReplyDelaySec = replyDelay;
+        }
+      }).catch(() => {});
     }
 
     if (this.tg.sendSticker && Math.random() < 0.08) {
@@ -1926,6 +1992,26 @@ function incomingContextBody(ctx: { text?: string; media?: IncomingMessage["medi
 }
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+
+/** 比较两个 RelationshipScore 是否完全相等（用于跳过无意义的写盘）。 */
+function scoresEqual(
+  a: { interest: number; trust: number; attraction: number; annoyance: number; cringe: number },
+  b: { interest: number; trust: number; attraction: number; annoyance: number; cringe: number }
+): boolean {
+  return a.interest === b.interest && a.trust === b.trust && a.attraction === b.attraction && a.annoyance === b.annoyance && a.cringe === b.cringe;
+}
+
+/** 返回她在指定时区的当前小时（0-23）。Intl 不可用时回退 UTC。 */
+function localHour(tz: string, now = new Date()): number {
+  try {
+    const fmt = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "2-digit", hour12: false });
+    const parts = fmt.formatToParts(now);
+    const h = Number(parts.find(p => p.type === "hour")?.value ?? "0");
+    return Number.isFinite(h) ? ((h % 24) + 24) % 24 : 0;
+  } catch {
+    return now.getUTCHours();
+  }
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
