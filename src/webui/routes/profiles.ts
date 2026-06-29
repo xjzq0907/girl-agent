@@ -384,10 +384,16 @@ function normalizeMinorLlm(cfg: Pick<ProfileConfig, "llm">, incoming: ProfileCon
 }
 
 type WebProfileConfig = Omit<ProfileConfig, "telegram"> & {
-  telegram: Omit<ProfileConfig["telegram"], "proxy"> & { proxy?: string };
+  telegram?: Omit<NonNullable<ProfileConfig["telegram"]>, "proxy"> & { proxy?: string };
 };
 
 function configForWeb(cfg: ProfileConfig): WebProfileConfig {
+  // web 模式下 telegram 字段可缺省；Telegram 模式下做 proxy 字符串化
+  if (!cfg.telegram) {
+    const { telegram: _omit, ...rest } = cfg;
+    void _omit;
+    return { ...rest, telegram: undefined };
+  }
   return {
     ...cfg,
     telegram: {

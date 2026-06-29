@@ -1,4 +1,10 @@
-export type ClientMode = "bot" | "userbot";
+/**
+ * 客户端模式：
+ * - "bot"     — Telegram Bot（grammy）
+ * - "userbot" — Telegram Userbot（MTProto，模拟真实账号）
+ * - "web"     — WebUI 原生聊天通道（无需 Telegram）
+ */
+export type ClientMode = "bot" | "userbot" | "web";
 
 export type LLMProto = "openai" | "anthropic";
 
@@ -135,6 +141,10 @@ export interface ProfileConfig {
     apiKey: string;
     model: string;
   };
+  /**
+   * Telegram 相关配置。`mode === "web"` 时可给空对象（内部所有字段都可选），
+   * Telegram 模式下也要存在以保持向后兼容。所有内部字段都是可选的。
+   */
   telegram: {
     botToken?: string;
     apiId?: number;

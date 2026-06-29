@@ -14,6 +14,7 @@ import { RelationshipPage } from "./pages/RelationshipPage";
 import { DiagnosticsPage } from "./pages/DiagnosticsPage";
 import { StatsPage } from "./pages/StatsPage";
 import { SetupFlow } from "./pages/SetupFlow";
+import { ChatPage } from "./pages/ChatPage";
 import { AuthGate } from "./components/AuthGate";
 
 export function App() {
@@ -49,6 +50,7 @@ export function App() {
         <div className="main">
           <Topbar />
           <div className="content">
+            {tab === "chat" && <ChatPage />}
             {tab === "logs" && <LogsPage />}
             {tab === "configuration" && <ConfigurationPage />}
             {tab === "memory" && <MemoryPage />}

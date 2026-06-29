@@ -126,7 +126,7 @@ export class Runtime extends EventEmitter {
     this.tg = await makeTgAdapter(this.cfg);
     await this.tg.start((m) => this.handleIncoming(m));
     if (this.tg.getSelf) this.tgSelf = this.tg.getSelf();
-    this.emit("event", { type: "info", text: `Telegram ${this.cfg.mode} 已启动。配置: ${this.cfg.slug} | presence: ${this.presenceProfile.pattern} | communication: ${communicationProfileLabel(normalizeCommunicationProfile(this.cfg))}` } as RuntimeEvent);
+    this.emit("event", { type: "info", text: `通道 ${this.cfg.mode} 已启动。配置: ${this.cfg.slug} | presence: ${this.presenceProfile.pattern} | communication: ${communicationProfileLabel(normalizeCommunicationProfile(this.cfg))}` } as RuntimeEvent);
     this.lastStage = this.cfg.stage;
 
     // 预加载 daily-life（后台执行，不阻塞启动）
@@ -170,6 +170,16 @@ export class Runtime extends EventEmitter {
   resume() { this.paused = false; }
 
   private histKey(chatId: number | string) { return String(chatId); }
+
+  /**
+   * 会话日志写入的统一入口。
+   * - `mode === "web"` 时直接跳过（Web 通道是 ephemeral，不写 log/ 也不读历史）
+   * - 内部静默吞错（fire-and-forget 语义，避免 LLM/IO 失败影响业务）
+   */
+  private async maybeAppendLog(line: string, fromId?: number): Promise<void> {
+    if (this.cfg.mode === "web") return;
+    try { await appendSessionLog(this.cfg.slug, this.cfg.tz, line, fromId); } catch { /* ignore */ }
+  }
 
   private scheduleReply(
     key: string,
@@ -393,7 +403,7 @@ export class Runtime extends EventEmitter {
             try {
               await this.tg.editText!(chatId, messageId, rawText);
               this.emit("event", { type: "info", text: `edit-self: "${text.slice(0, 30)}" → "${rawText.slice(0, 30)}"`, chatId } as RuntimeEvent);
-              await appendSessionLog(this.cfg.slug, this.cfg.tz, `  ~ edit "${text.slice(0, 40)}" → "${rawText.slice(0, 40)}"`, typeof chatId === "number" ? chatId : undefined).catch(() => {});
+              await this.maybeAppendLog( `  ~ edit "${text.slice(0, 40)}" → "${rawText.slice(0, 40)}"`, typeof chatId === "number" ? chatId : undefined).catch(() => {});
               // 更新 sentMessages 缓冲区和 history。
               const rec = this.sentMessages.find(s => s.messageId === messageId);
               if (rec) rec.text = rawText;
@@ -409,7 +419,7 @@ export class Runtime extends EventEmitter {
       this.lastHerReplyTs.set(this.histKey(chatId), Date.now());
       this.bumpStageStats("her");
       this.emit("event", { type: "outgoing", text, chatId } as RuntimeEvent);
-      await appendSessionLog(this.cfg.slug, this.cfg.tz, `  -> 她: ${text}`, typeof chatId === "number" ? chatId : undefined);
+      await this.maybeAppendLog( `  -> 她: ${text}`, typeof chatId === "number" ? chatId : undefined);
       sent.push(text);
     }
     return sent;
@@ -419,7 +429,7 @@ export class Runtime extends EventEmitter {
     if (this.userbotActionAvailable("readHistory")) await this.tg.readHistory?.(chatId).catch(() => {});
     this.setDecisionStatus(this.histKey(chatId), "fallback", "LLM 未给出安全回复");
     this.emit("event", { type: "ignored", text: hist[hist.length - 1]?.content ?? "", reason: reasonTag } as RuntimeEvent);
-    await appendSessionLog(this.cfg.slug, this.cfg.tz, `  -> ignored (${reasonTag})`, typeof chatId === "number" ? chatId : undefined);
+    await this.maybeAppendLog( `  -> ignored (${reasonTag})`, typeof chatId === "number" ? chatId : undefined);
   }
 
   private async sendTextBubble(chatId: number | string, text: string, hist: ConversationTurn[], typing = true, logPrefix = "  -> 她"): Promise<void> {
@@ -434,7 +444,7 @@ export class Runtime extends EventEmitter {
     this.lastHerReplyTs.set(this.histKey(chatId), now);
     hist.push({ role: "assistant", content: text, ts: now });
     this.emit("event", { type: "outgoing", text, chatId } as RuntimeEvent);
-    await appendSessionLog(this.cfg.slug, this.cfg.tz, `${logPrefix}: ${text}`, typeof chatId === "number" ? chatId : undefined);
+    await this.maybeAppendLog( `${logPrefix}: ${text}`, typeof chatId === "number" ? chatId : undefined);
   }
 
   /**
@@ -708,15 +718,16 @@ false — 如果回复暴露了她是 AI/Claude/ChatGPT/助手/模型，提到�
       const seq = (this.incomingSeq.get(key) ?? 0) + 1;
       this.incomingSeq.set(key, seq);
       this.pendingReplyIncoming.set(key, m);
-      const hist = await this.historyFor(key, m.fromId, isPrimary);
+      // Web 通道是 ephemeral：永不从 log/ 文件回读历史
+      const hist = await this.historyFor(key, m.fromId, isPrimary && this.cfg.mode !== "web");
       const incomingText = this.mediaAwareText(m);
       hist.push({ role: "user", content: incomingText, ts: Date.now() });
       this.histories.set(key, hist);
       this.emit("event", { type: "incoming", text: incomingText, chatId: m.chatId } as RuntimeEvent);
       if (isPrimary) {
-        await appendSessionLog(this.cfg.slug, this.cfg.tz, `[${new Date().toISOString()}] 他(${m.fromId}): ${incomingText}`, m.fromId);
+        await this.maybeAppendLog( `[${new Date().toISOString()}] 他(${m.fromId}): ${incomingText}`, m.fromId);
       } else {
-        await appendSessionLog(this.cfg.slug, this.cfg.tz, `[${new Date().toISOString()}] 他人(${m.fromId}): ${incomingText}`, m.fromId);
+        await this.maybeAppendLog( `[${new Date().toISOString()}] 他人(${m.fromId}): ${incomingText}`, m.fromId);
         await this.rememberSharedCrossChat(m.fromId, incomingText);
         recordInteractionMemory(this.llm, this.cfg, incomingText, undefined, m.fromId, "acquaintance").catch(() => {});
       }
@@ -899,7 +910,7 @@ false — 如果回复暴露了她是 AI/Claude/ChatGPT/助手/模型，提到�
         await this.tg.setReaction(m.chatId, target.messageId, tick.reaction!).catch(() => {});
         const msgTag = target.messageId !== m.messageId ? ` (msgId=${target.messageId})` : "";
         this.emit("event", { type: "info", text: `表情反应 ${tick.reaction}${msgTag} 针对 "${target.text.slice(0, 40)}"` } as RuntimeEvent);
-        appendSessionLog(this.cfg.slug, this.cfg.tz, `  -> reaction ${tick.reaction}${msgTag}`, m.fromId).catch(() => {});
+        this.maybeAppendLog( `  -> reaction ${tick.reaction}${msgTag}`, m.fromId).catch(() => {});
       }, reactDelay).unref?.();
     }
 
@@ -915,7 +926,7 @@ false — 如果回复暴露了她是 AI/Claude/ChatGPT/助手/模型，提到�
         await this.tg.readHistory?.(m.chatId).catch(() => {});
       }
       this.emit("event", { type: "ignored", text: incomingText, reason: tick.ignoreReason ?? tick.intent } as RuntimeEvent);
-      await appendSessionLog(this.cfg.slug, this.cfg.tz, `  -> ignored (${tick.intent}: ${tick.ignoreReason ?? ""})`, m.fromId);
+      await this.maybeAppendLog( `  -> ignored (${tick.intent}: ${tick.ignoreReason ?? ""})`, m.fromId);
       recordInteractionMemory(this.llm, this.cfg, incomingText, undefined, m.fromId, "primary").catch(() => {});
       return;
     }
@@ -1682,7 +1693,7 @@ false — 如果回复暴露了她是 AI/Claude/ChatGPT/助手/模型，提到�
       await maybeAdvanceRelationshipTimeline(this.cfg, oldStage, decision.next);
       this.stageStats.set(decision.next, { herMsgs: 0, hisMsgs: 0, ignoresInStage: 0, lastCheckAt: 0, stageEnteredAt: Date.now() });
       this.emit("event", { type: "info", text: `stage ${oldStage} → ${decision.next} (${decision.reason})` } as RuntimeEvent);
-      await appendSessionLog(this.cfg.slug, this.cfg.tz, `[stage-transition] ${oldStage} → ${decision.next} (${decision.reason})`, this.cfg.ownerId);
+      await this.maybeAppendLog( `[stage-transition] ${oldStage} → ${decision.next} (${decision.reason})`, this.cfg.ownerId);
     } catch { /* swallow */ }
   }
 
@@ -1714,7 +1725,7 @@ false — 如果回复暴露了她是 AI/Claude/ChatGPT/助手/模型，提到�
     };
     this.emit("event", { type: "info", text: `delete: ${awareness}${m.deletion.text ? ` "${m.deletion.text.slice(0, 40)}"` : ""}` } as RuntimeEvent);
     if (this.isPrimaryFrom(m.fromId)) {
-      await appendSessionLog(this.cfg.slug, this.cfg.tz, `[deletion ${awareness}] 他删除了: "${m.deletion.text.slice(0, 80)}"`, m.fromId);
+      await this.maybeAppendLog( `[deletion ${awareness}] 他删除了: "${m.deletion.text.slice(0, 80)}"`, m.fromId);
     }
     if (!shouldRespondToDeletion(ctx)) return;
     if (!inHistory && awareness === "saw-and-read") {
@@ -1805,7 +1816,7 @@ false — 如果回复暴露了她是 AI/Claude/ChatGPT/助手/模型，提到�
     }
     this.emit("event", { type: "info", text: `emoji-react ${m.emojiReaction.emoji} (${decision.category}/${decision.intent}): ${decision.reason}` } as RuntimeEvent);
     if (isPrimary) {
-      await appendSessionLog(this.cfg.slug, this.cfg.tz, `[emoji-react] 他(${m.fromId}): ${m.emojiReaction.emoji} → ${decision.intent} (${decision.reason})`, m.fromId);
+      await this.maybeAppendLog( `[emoji-react] 他(${m.fromId}): ${m.emojiReaction.emoji} → ${decision.intent} (${decision.reason})`, m.fromId);
     }
     if (decision.moodDelta && Object.keys(decision.moodDelta).length > 0) {
       const newScore = applyMoodDelta(rel.score, decision.moodDelta);

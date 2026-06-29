@@ -4,6 +4,8 @@ import { Runtime, type RuntimeEvent } from "../engine/runtime.js";
 import { readConfig } from "../storage/md.js";
 import { checkForPendingMigrations, runMigrations, formatUpdateWarnings } from "../migrations/index.js";
 import { makeLLM } from "../llm/index.js";
+import { isWebAdapter } from "../telegram/web-adapter.js";
+import { webChatHub } from "./web-chat-hub.js";
 
 /**
  * RuntimeBus — WebUI 代理运行时的编排器。
@@ -85,6 +87,11 @@ export class RuntimeBus extends EventEmitter {
       this.pushLog(cfg.slug, { type: "error", text: `runtime start failed: ${msg}` });
       throw e;
     }
+
+    // Web 通道：把 WebAdapter 注册到 hub，让 /ws/chat/:slug 升级时能反查
+    const tg = (rt as unknown as { tg?: unknown }).tg;
+    if (isWebAdapter(tg)) webChatHub.register(cfg.slug, tg);
+
     this.emit("status", this.status(cfg.slug));
     return this.status(cfg.slug);
   }
@@ -95,6 +102,7 @@ export class RuntimeBus extends EventEmitter {
     const onEv = this.eventListeners.get(slug);
     if (onEv) rt.off("event", onEv);
     this.eventListeners.delete(slug);
+    webChatHub.unregister(slug);
     try { await rt.stop(); } catch { /* ignore */ }
     this.runtimes.delete(slug);
     this.states.set(slug, { slug, state: "stopped" });

@@ -15,7 +15,7 @@ interface DraftState {
   age: number;
   nationality: "CN" | "RU" | "UA";
   tz: string;
-  tgMode: "bot" | "userbot";
+  tgMode: "bot" | "userbot" | "web";
   botToken: string;
   botApiRoot: string;
   // userbot
@@ -330,7 +330,9 @@ export function SetupFlow() {
       const llmPreset = llmPresets.find(p => p.id === d.llmPresetId);
       const minorPreset = llmPresets.find(p => p.id === d.minorPresetId);
       const comm = comms.find(c => c.id === d.communicationId);
-      const tgConfig: ProfileConfig["telegram"] = d.tgMode === "bot"
+      const tgConfig: ProfileConfig["telegram"] = d.tgMode === "web"
+        ? {}
+        : d.tgMode === "bot"
         ? { botToken: d.botToken, useWSS: true, proxy: d.proxy || undefined, botApi: d.botApiRoot ? { apiRoot: d.botApiRoot } : undefined }
         : {
             apiId: d.apiId ? Number(d.apiId) : undefined,
@@ -575,15 +577,19 @@ export function SetupFlow() {
 
         {currentStep === "tg" && (
           <>
-            <h1 className="setup-title">Telegram</h1>
-            <p className="setup-subtitle">正在将 AI 女友连接到 Telegram。</p>
+            <h1 className="setup-title">连接方式</h1>
+            <p className="setup-subtitle">选择 AI 女友如何接收和回复消息。</p>
             <div className="form-row">
               <label>模式</label>
-              <div className="grid cols-2" style={{ gap: 8 }}>
+              <div className="provider-grid">
+                <div className={`provider-card ${d.tgMode === "web" ? "active" : ""}`} onClick={() => set("tgMode", "web")}>
+                  <div className="p-name">网页聊天</div>
+                  <div className="p-hint">不需要 Telegram 账号。直接在浏览器里聊。</div>
+                  {d.tgMode === "web" && <div className="p-rec">REC</div>}
+                </div>
                 <div className={`provider-card ${d.tgMode === "bot" ? "active" : ""}`} onClick={() => set("tgMode", "bot")}>
-                  <div className="p-name">Bot</div>
-                  <div className="p-hint">推荐。需要 @BotFather 的 Token。无需手机号。</div>
-                  {d.tgMode === "bot" && <div className="p-rec">REC</div>}
+                  <div className="p-name">Telegram Bot</div>
+                  <div className="p-hint">需要 @BotFather 的 Token。无需手机号。</div>
                 </div>
                 <div className={`provider-card ${d.tgMode === "userbot" ? "active" : ""}`} onClick={() => set("tgMode", "userbot")}>
                   <div className="p-name">Userbot</div>
@@ -591,6 +597,13 @@ export function SetupFlow() {
                 </div>
               </div>
             </div>
+            {d.tgMode === "web" && (
+              <div className="form-row">
+                <div className="hint" style={{ padding: "12px 16px", background: "var(--ga-card-2)", borderRadius: 8 }}>
+                  无需任何 Telegram 配置。创建资料后，在左侧「聊天」标签页打开会话即可开始对话。
+                </div>
+              </div>
+            )}
             {d.tgMode === "bot" ? (
               <div className="grid cols-2">
                 <div className="form-row">
@@ -951,7 +964,7 @@ export function SetupFlow() {
             <p className="setup-subtitle">检查设置。下一步将创建个人资料并通过 LLM 生成人设。</p>
             <div className="form-row">
               <div><strong>{d.name}</strong>, {d.age}, {d.nationality}, {d.tz}</div>
-              <div><strong>TG:</strong> {d.tgMode === "bot" ? `bot (token ${d.botToken ? "ok" : "missing"})` : `userbot (${d.sessionString ? "session ok" : d.apiId ? "creds ok, no session" : "missing"})`}</div>
+              <div><strong>连接:</strong> {d.tgMode === "web" ? "网页聊天（无需 Telegram）" : d.tgMode === "bot" ? `Telegram bot (token ${d.botToken ? "ok" : "missing"})` : `userbot (${d.sessionString ? "session ok" : d.apiId ? "creds ok, no session" : "missing"})`}</div>
               <div><strong>LLM:</strong> {d.llmPresetId} / {d.llmModel}</div>
               <div><strong>阶段:</strong> {stages.find(s => s.id === d.stage)?.label}</div>
             </div>
@@ -1026,6 +1039,7 @@ function stepValid(step: string, d: DraftState): boolean {
     case "mode": return true;
     case "name": return !!d.name && d.age >= MIN_AGE && d.age <= MAX_AGE;
     case "tg":
+      if (d.tgMode === "web") return true;
       if (d.tgMode === "bot") return !!d.botToken;
       // userbot
       if (d.userbotMethod === "own") return !!d.apiId && !!d.apiHash && !!d.phone;

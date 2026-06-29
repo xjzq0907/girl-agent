@@ -124,52 +124,61 @@ export function ConfigurationPage() {
 
       <div className="card">
         <div className="card-header">
-          <div className="h-title">Telegram</div>
+          <div className="h-title">连接方式</div>
           <div className="h-meta">连接模式与令牌</div>
         </div>
         <div className="form-row">
           <label>模式</label>
-          <select className="select" value={merged.mode} onChange={e => pf("mode", e.target.value as "bot" | "userbot")}>
+          <select className="select" value={merged.mode} onChange={e => pf("mode", e.target.value as "bot" | "userbot" | "web")}>
+            <option value="web">web — 网页聊天（无需 Telegram，直接在浏览器里对话）</option>
             <option value="bot">bot — Bot API（需要 @BotFather 令牌）</option>
             <option value="userbot">userbot — MTProto（手机号；api_id/api_hash 可选）</option>
           </select>
-          <div className="hint">{merged.mode === "bot"
+          <div className="hint">{merged.mode === "web"
+            ? "网页聊天模式：直接在 WebUI 的「聊天」标签页与她对话，无需 Telegram 账号。历史为临时性。"
+            : merged.mode === "bot"
             ? "机器人只能向已通过 /start 添加它的用户发送消息。适合大多数场景。"
             : "Userbot 使用普通 TG 账号连接。可按用户名/手机号向所有人发送消息。请在自己的账号上使用。"}</div>
         </div>
-        {merged.mode === "bot" ? (
+        {merged.mode === "web" ? (
+          <div className="form-row">
+            <div className="hint" style={{ padding: "12px 16px", background: "var(--ga-card-2)", borderRadius: 8 }}>
+              网页聊天模式不需要任何 Telegram 配置。保存后在左侧「聊天」标签页打开会话即可。
+            </div>
+          </div>
+        ) : merged.mode === "bot" ? (
           <div className="grid cols-2">
             <div className="form-row">
               <label>Bot Token</label>
-              <input className="input" type="password" value={merged.telegram.botToken ?? ""} onChange={e => pfDeep("telegram.botToken", e.target.value)} placeholder="123456789:AAFxxxxxxxxx" />
+              <input className="input" type="password" value={merged.telegram?.botToken ?? ""} onChange={e => pfDeep("telegram.botToken", e.target.value)} placeholder="123456789:AAFxxxxxxxxx" />
               <div className="hint">在 <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> 通过 /newbot 命令获取</div>
             </div>
             <div className="form-row">
               <label>Bot API 端点（可选）</label>
-              <input className="input" value={merged.telegram.botApi?.apiRoot ?? ""} onChange={e => pfDeep("telegram.botApi", { ...(merged.telegram.botApi ?? {}), apiRoot: e.target.value || undefined })} placeholder="https://api.telegram.org 或自定义反向代理" />
+              <input className="input" value={merged.telegram?.botApi?.apiRoot ?? ""} onChange={e => pfDeep("telegram.botApi", { ...(merged.telegram?.botApi ?? {}), apiRoot: e.target.value || undefined })} placeholder="https://api.telegram.org 或自定义反向代理" />
               <div className="hint">用于 Bot API 代理/本地服务器。可留空。</div>
             </div>
           </div>
         ) : (
           <div className="grid cols-2">
-            <div className="form-row"><label>API ID（可选）</label><input className="input" value={merged.telegram.apiId ?? ""} onChange={e => pfDeep("telegram.apiId", Number(e.target.value) || undefined)} placeholder="留空 = 作者代理" /></div>
-            <div className="form-row"><label>API Hash（可选）</label><input className="input" type="password" value={merged.telegram.apiHash ?? ""} onChange={e => pfDeep("telegram.apiHash", e.target.value || undefined)} placeholder="留空 = 作者代理" /></div>
-            <div className="form-row"><label>手机号</label><input className="input" value={merged.telegram.phone ?? ""} onChange={e => pfDeep("telegram.phone", e.target.value)} placeholder="+79..." /></div>
-            <div className="form-row"><label>Session String（如有）</label><input className="input" type="password" value={merged.telegram.sessionString ?? ""} onChange={e => pfDeep("telegram.sessionString", e.target.value)} /></div>
+            <div className="form-row"><label>API ID（可选）</label><input className="input" value={merged.telegram?.apiId ?? ""} onChange={e => pfDeep("telegram.apiId", Number(e.target.value) || undefined)} placeholder="留空 = 作者代理" /></div>
+            <div className="form-row"><label>API Hash（可选）</label><input className="input" type="password" value={merged.telegram?.apiHash ?? ""} onChange={e => pfDeep("telegram.apiHash", e.target.value || undefined)} placeholder="留空 = 作者代理" /></div>
+            <div className="form-row"><label>手机号</label><input className="input" value={merged.telegram?.phone ?? ""} onChange={e => pfDeep("telegram.phone", e.target.value)} placeholder="+79..." /></div>
+            <div className="form-row"><label>Session String（如有）</label><input className="input" type="password" value={merged.telegram?.sessionString ?? ""} onChange={e => pfDeep("telegram.sessionString", e.target.value)} /></div>
             <div className="hint" style={{ gridColumn: "1 / -1" }}>如果通过"作者代理"登录，请将 API ID/Hash 留空。</div>
           </div>
         )}
         <div className="grid cols-2">
           <div className="form-row">
             <label className="toggle">
-              <input type="checkbox" checked={merged.telegram.useWSS !== false} onChange={e => pfDeep("telegram.useWSS", e.target.checked)} />
+              <input type="checkbox" checked={merged.telegram?.useWSS !== false} onChange={e => pfDeep("telegram.useWSS", e.target.checked)} />
               <span className="track"><span className="knob" /></span>
               <span>WSS（websocket，增强连接稳定性）</span>
             </label>
           </div>
           <div className="form-row">
             <label>代理（可选）</label>
-            <input className="input" value={merged.telegram.proxy ?? ""} onChange={e => pfDeep("telegram.proxy", e.target.value)} placeholder="tg://proxy?... 或 socks5://user:pass@host:port" />
+            <input className="input" value={merged.telegram?.proxy ?? ""} onChange={e => pfDeep("telegram.proxy", e.target.value)} placeholder="tg://proxy?... 或 socks5://user:pass@host:port" />
           </div>
         </div>
         <div className="form-row">

@@ -85,10 +85,17 @@ export interface TgAdapter {
 }
 
 export async function makeTgAdapter(cfg: ProfileConfig): Promise<TgAdapter> {
+  if (cfg.mode === "web") {
+    const mod = await import("./web-adapter.js");
+    return mod.makeWebAdapter(cfg);
+  }
   if (cfg.mode === "bot") {
     const mod = await import("./bot.js");
     return mod.makeBotAdapter(cfg);
   }
-  const mod = await import("./userbot.js");
-  return mod.makeUserbotAdapter(cfg);
+  if (cfg.mode === "userbot") {
+    const mod = await import("./userbot.js");
+    return mod.makeUserbotAdapter(cfg);
+  }
+  throw new Error(`unsupported client mode: ${(cfg as { mode: string }).mode}`);
 }

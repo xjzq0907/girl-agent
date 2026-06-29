@@ -9,10 +9,10 @@ export interface ProfileSummary {
 
 export interface ProfileConfig {
   slug: string; name: string; age: number; nationality: "RU" | "UA"; tz: string;
-  mode: "bot" | "userbot"; stage: string;
+  mode: "bot" | "userbot" | "web"; stage: string;
   llm: { presetId: string; proto: "openai" | "anthropic"; baseURL?: string; apiKey: string; model: string; oauthRefreshToken?: string; oauthExpiresAt?: number };
   minorLlm?: { enabled: boolean; sameAsMain?: boolean; presetId: string; proto: "openai" | "anthropic"; baseURL?: string; apiKey: string; model: string };
-  telegram: { botToken?: string; apiId?: number; apiHash?: string; sessionString?: string; phone?: string; useWSS?: boolean; proxy?: string; botApi?: { apiRoot?: string } };
+  telegram?: { botToken?: string; apiId?: number; apiHash?: string; sessionString?: string; phone?: string; useWSS?: boolean; proxy?: string; botApi?: { apiRoot?: string } };
   mcp?: { id: string; secrets: Record<string, string> }[];
   ownerId?: number;
   privacy?: "owner-only" | "allow-strangers";
@@ -276,4 +276,67 @@ export function statusSocket(slug: string, onSnapshot: (s: { status: { state: st
     } catch { /* ignore */ }
   });
   return () => { try { ws.close(); } catch { /* ignore */ } };
+}
+
+// ===== Web 通道聊天 =====
+
+export interface ChatSessionInfo {
+  sessionId: string;
+  chatKey: string;
+  profileName: string;
+  fromId: number;
+}
+
+export async function ensureChatSession(slug: string): Promise<ChatSessionInfo> {
+  return req<ChatSessionInfo>("POST", `/api/chat/${encodeURIComponent(slug)}/session`);
+}
+
+/** 服务端 → 客户端的所有帧类型。 */
+export type ChatFrame =
+  | { kind: "welcome"; sessionId: string; chatKey: string; profileName: string; fromId: number }
+  | { kind: "event"; event: { type: string; text?: string; chatId?: number | string; t: number; [k: string]: unknown } }
+  | { kind: "outgoing"; text: string; ts: number; msgId: string; chatId: string }
+  | { kind: "typing"; on: boolean; ts: number }
+  | { kind: "reaction"; messageId: number; emoji: string }
+  | { kind: "edit"; messageId: number; text: string }
+  | { kind: "pong"; ts: number };
+
+/**
+ * 建立 /ws/chat/:slug?sessionId=<id> 双向连接。
+ * 返回 disconnect 闭包（调用即关闭 socket）。
+ */
+export function chatSocket(
+  slug: string,
+  sessionId: string,
+  onFrame: (f: ChatFrame) => void
+): () => void {
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  const ws = new WebSocket(
+    `${proto}//${location.host}/ws/chat/${encodeURIComponent(slug)}?sessionId=${encodeURIComponent(sessionId)}`
+  );
+  ws.addEventListener("message", (m) => {
+    try {
+      const data = JSON.parse(m.data);
+      if (data && typeof data === "object" && typeof data.kind === "string") {
+        onFrame(data as ChatFrame);
+      }
+    } catch { /* ignore malformed */ }
+  });
+  return () => { try { ws.close(); } catch { /* ignore */ } };
+}
+
+/** 客户端 → 服务端的帧类型。 */
+export type ChatOutgoing =
+  | { kind: "user-msg"; text: string; messageId: string; clientTs: number }
+  | { kind: "user-reaction"; messageId: string; emoji: string; removed?: boolean }
+  | { kind: "typing-stop" }
+  | { kind: "ping"; ts: number };
+
+/** 用法：socket.send(chatOutgoing("user-msg", { text, messageId, clientTs })) */
+export function chatOutgoing(kind: "user-msg", payload: { text: string; messageId: string; clientTs: number }): ChatOutgoing;
+export function chatOutgoing(kind: "user-reaction", payload: { messageId: string; emoji: string; removed?: boolean }): ChatOutgoing;
+export function chatOutgoing(kind: "typing-stop"): ChatOutgoing;
+export function chatOutgoing(kind: "ping", payload: { ts: number }): ChatOutgoing;
+export function chatOutgoing(kind: ChatOutgoing["kind"], payload?: unknown): ChatOutgoing {
+  return { kind, ...(payload as object ?? {}) } as ChatOutgoing;
 }

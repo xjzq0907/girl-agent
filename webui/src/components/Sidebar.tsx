@@ -3,6 +3,7 @@ import { useStore } from "../lib/store";
 import type { Tab } from "../lib/store";
 
 const ITEMS: { id: Tab; label: string; icon: string }[] = [
+  { id: "chat", label: "聊天", icon: "✎" },
   { id: "assistant", label: "助手", icon: "✦" },
   { id: "logs", label: "日志 / 状态", icon: "≡" },
   { id: "relationship", label: "关系", icon: "♥" },
